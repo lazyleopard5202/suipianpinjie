@@ -2,159 +2,75 @@ package com.kaogu.Algorithm;
 
 public class DoubleLinkedList {
 
-    private Dot dot;
-    private DoubleLinkedList prev;
-    private DoubleLinkedList next;
-    private static DoubleLinkedList head;
-    private static DoubleLinkedList tail;
+    private DoubleLinkedNode head;
+    private int size;
 
-    public DoubleLinkedList() {
-    }
-
-    public DoubleLinkedList(Dot dot) {
-        this.dot = dot;
-    }
-
-    public DoubleLinkedList(Dot dot, DoubleLinkedList prev, DoubleLinkedList next) {
-        this.dot = dot;
-        this.prev = prev;
-        this.next = next;
-    }
-
-    public Dot getDot() {
-        return dot;
-    }
-
-    public void setDot(Dot dot) {
-        this.dot = dot;
-    }
-
-    public DoubleLinkedList getPrev() {
-        return prev;
-    }
-
-    public void setPrev(DoubleLinkedList prev) {
-        this.prev = prev;
-    }
-
-    public DoubleLinkedList getNext() {
-        return next;
-    }
-
-    public void setNext(DoubleLinkedList next) {
-        this.next = next;
-    }
-
-    public static DoubleLinkedList getHead() {
+    public DoubleLinkedNode getHead() {
         return head;
     }
 
-    public static void setHead(DoubleLinkedList head) {
-        DoubleLinkedList.head = head;
+    public DoubleLinkedList() {
+        head = new DoubleLinkedNode();
+        size = 0;
     }
 
-    public static DoubleLinkedList getTail() {
-        return tail;
+    public int size() {
+        return size;
     }
 
-    public static void setTail(DoubleLinkedList tail) {
-        DoubleLinkedList.tail = tail;
-    }
-
-    public int length() {
-        int cnt = 0;
-        for (DoubleLinkedList i = head; i != null; i = i.next) {
-            cnt++;
+    public DoubleLinkedNode getNode(int index) throws Exception {
+        if (index >= size) {
+            throw new Exception("index " + index + " out of bound " + size);
         }
-        return cnt;
+        DoubleLinkedNode temp = head;
+        for (int i = 0; i <= index; i++) {
+            temp = temp.getNext();
+        }
+        return temp;
     }
 
     public void push_front(Dot dot) {
-        DoubleLinkedList temp = new DoubleLinkedList(dot);
-        if (head == null) {
-            tail = temp;
-        }else {
-            head.prev = temp;
-            temp.next = head;
-        }
-        head = temp;
+        DoubleLinkedNode temp = new DoubleLinkedNode(dot);
+        temp.setNext(head.getNext());
+        temp.getNext().setPrev(temp);
+        temp.setPrev(head);
+        head.setNext(temp);
+        size++;
     }
 
-    public void push_back(Dot dot) {
-        DoubleLinkedList temp = new DoubleLinkedList(dot);
-        if (length() == 0) {
-            head = temp;
+    public void push_back(Dot dot) throws Exception {
+        DoubleLinkedNode temp = new DoubleLinkedNode(dot);
+        if (size == 0) {
+            temp.setPrev(temp);
+            temp.setNext(temp);
+            head.setNext(temp);
         }else {
-            tail.next = temp;
-            temp.prev = tail;
+            DoubleLinkedNode prev = getNode(size-1);
+            temp.setNext(prev.getNext());
+            temp.setPrev(prev);
+            prev.getNext().setPrev(temp);
+            prev.setNext(temp);
         }
-        tail = temp;
+        size++;
     }
 
     public void add(Dot dot, int index) throws Exception {
-        if (index == 0) {
-            push_front(dot);
-        }else if (index == length()) {
-            push_back(dot);
-        }else if (index > length()) {
-            throw new Exception("index " + index + " out of bound " + length());
-        }else {
-            int cnt = 0;
-            for (DoubleLinkedList temp = head; temp != null; temp = temp.next) {
-                if (cnt == index) {
-                    DoubleLinkedList A = temp;
-                    DoubleLinkedList B = temp.next;
-                    DoubleLinkedList node = new DoubleLinkedList(dot);
-                    A.next = node;
-                    node.prev = A;
-                    node.next = B;
-                    B.prev = node;
-                    break;
-                }
-                cnt++;
-            }
-        }
+        DoubleLinkedNode node = getNode(index);
+        DoubleLinkedNode temp = new DoubleLinkedNode(dot, node.getPrev(), node);
+        node.getPrev().setNext(temp);
+        node.setPrev(temp);
+        size++;
     }
 
     public void remove(int index) throws Exception {
-        if (index == 0) {
-            head = head.next;
-            head.prev = null;
-        }else if (index == length()-1) {
-            tail = tail.prev;
-            tail.next = null;
-        }else if (index > length()) {
-            throw new Exception("index " + index + " out of bound " + length());
-        }else {
-            int cnt = 0;
-            for (DoubleLinkedList temp = head; temp != null; temp = temp.next) {
-                if (cnt == index) {
-                    temp.next.prev = temp.prev;
-                    temp.prev.next = temp.next;
-                    break;
-                }
-                cnt++;
-            }
-        }
+        DoubleLinkedNode node = getNode(index);
+        node.getPrev().setNext(node.getNext());
+        node.getNext().setPrev(node.getPrev());
+        size--;
     }
 
-    public DoubleLinkedList get(int index) {
-        int cnt = 0;
-        for (DoubleLinkedList temp = head; temp != null; temp = temp.next) {
-            if (cnt == index) {
-                return temp;
-            }
-            cnt++;
-        }
-        return null;
-    }
-
-    public DoubleLinkedList get(Dot dot) {
-        for (DoubleLinkedList temp = head; temp != null; temp = temp.next) {
-            if (temp.getDot() == dot) {
-                return temp;
-            }
-        }
-        return null;
+    public DoubleLinkedNode get(int index) throws Exception {
+        DoubleLinkedNode node = getNode(index);
+        return node;
     }
 }

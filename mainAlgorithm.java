@@ -168,47 +168,6 @@ public class mainAlgorithm {
         }
     }
 
-    public static void writeBorderPLY(String ply_path) throws IOException {
-        PLYModel plyModel = readPLY(ply_path);
-        List<Dot> dotList = plyModel.getDotList();
-        List<List<Integer>> FaceGroupList = plyModel.ClassifyFaceGroup(5);
-        List<List<Line>> LineGroupList = new ArrayList<>();
-        int border_length = 0;
-        for (int i = 0; i < LineGroupList.size(); i++) {
-            border_length += LineGroupList.get(i).size();
-        }
-        String target_path = ply_path.substring(0, ply_path.length()-4) + "_border.ply";
-        System.out.println(new Date().getTime());
-        try {
-            BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
-            out.write("ply\n" +
-                    "format ascii 1.0\n" +
-                    "element vertex " + dotList.size() + "\n");
-            out.write("property float x\n" +
-                    "property float y\n" +
-                    "property float z\n");
-            out.write("element edge " + border_length + "\n");
-            out.write("property int vertex1\n" +
-                    "property int vertex2\n");
-            out.write("end_header\n");
-            for (int i = 0; i < dotList.size(); i++) {
-                Dot dot = dotList.get(i);
-                out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " \n");
-            }
-            for (int i = 0; i < LineGroupList.size(); i++) {
-                for (int j = 0; j < LineGroupList.get(i).size(); j++) {
-                    Line line = LineGroupList.get(i).get(j);
-                    out.write(line.getStart() + " " +line.getEnd() + " \n");
-                }
-            }
-            out.close();
-            System.out.println(new Date().getTime());
-            System.out.println("文件创建成功");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     public static void writeColorPLY(String ply_path, double threshold, int group_cnt) throws IOException {
         PLYModel plyModel = readPLY(ply_path);
         plyModel.makeGraph();
@@ -301,7 +260,7 @@ public class mainAlgorithm {
         PLYModel plyModel = readPLY(ply_path);
         plyModel.makeGraph();
         plyModel.ClassifyFaceGroup(threshold);
-        plyModel.UnionSmallGroup4(group_cnt);
+        plyModel.UnionSmallGroup2(group_cnt);
         List<Dot> dotList = plyModel.getDotList();
         List<Face> faceList = plyModel.getFaceList();
         List<List<Integer>> FaceGroupList = plyModel.getFaceGroupList();
@@ -423,12 +382,48 @@ public class mainAlgorithm {
         }
     }
 
-    public static void main(String[] args) throws IOException {
-        String ply_path = "C:\\Users\\what1\\IdeaProjects\\kaogu-master\\src\\main\\resources\\static\\polygons\\sa1.ply";
+    public static void writeBorderPLY(String ply_path) throws Exception {
+        PLYModel section_ply = readPLY(ply_path);
+        DoubleLinkedList[] doubleLinkedLists = section_ply.getBorderLine();
+        String target_path = ply_path.substring(0, ply_path.length()-4) + "_border.ply";
+        try {
+            BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
+            out.write("ply\n" +
+                    "format ascii 1.0\n" +
+                    "element vertex " + (doubleLinkedLists[0].size()+doubleLinkedLists[1].size()) + "\n");
+            out.write("property float x\n" +
+                    "property float y\n" +
+                    "property float z\n");
+            out.write("element edge " + (doubleLinkedLists[0].size()+doubleLinkedLists[1].size()) + "\n");
+            out.write("property int vertex1\n" +
+                    "property int vertex2\n");
+            out.write("end_header\n");
+            for (DoubleLinkedList doubleLinkedList : doubleLinkedLists) {
+                for (int i = 0; i < doubleLinkedList.size(); i++) {
+                    Dot dot = doubleLinkedList.getNode(i).getDot();
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + "\n");
+                }
+            }
+            DoubleLinkedList doubleLinkedList1 = doubleLinkedLists[0];
+            DoubleLinkedList doubleLinkedList2 = doubleLinkedLists[1];
+            for (int i = 0; i < doubleLinkedList1.size(); i++) {
+                out.write(i + " " + ((i+1) % doubleLinkedList1.size()) + "\n");
+            }
+            for (int i = 0; i < doubleLinkedList2.size()-1; i++) {
+                out.write((i+doubleLinkedList1.size()) + " " + (i+doubleLinkedList1.size()+1) + "\n");
+            }
+            out.write((doubleLinkedList1.size()+ doubleLinkedList2.size()-1) + " " + doubleLinkedList1.size() + "\n");
+            out.close();
+            System.out.println("Section_Border写入成功");
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        String ply_path = "C:\\Users\\what1\\IdeaProjects\\kaogu-master\\src\\main\\resources\\static\\polygons\\sa1_section.ply";
         long start = new Date().getTime();
-        writeSectionPLY(ply_path, 5, 4);
-        String section_path = ply_path.substring(0, ply_path.length()-4) + "_section.ply";
-        rewriteSectionPLY(section_path, 5, 7);
+        writeBorderPLY(ply_path);
         long end = new Date().getTime();
         System.out.println((end-start));
     }

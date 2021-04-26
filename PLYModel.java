@@ -45,6 +45,9 @@ public class PLYModel {
     //生成图
     public void makeGraph() {
         this.graph = new int[faceList.size()][3];
+        for (int[] temp : graph) {
+            Arrays.fill(temp, -1);
+        }
         long dot_size = dotList.size();
         int[] size = new int[faceList.size()];
         HashMap<Long, Integer> hashMap = new HashMap<>();
@@ -349,15 +352,21 @@ public class PLYModel {
             int index = -1;
             double min = 10000000;
             for (int j = 0; j < group_cnt; j++) {
+                System.out.print(distance[i][j] + " ");
                 if (distance[i][j] < min) {
                     min = distance[i][j];
                     index = j;
                 }
             }
+            System.out.println();
             if (min < 5) {
                 FaceGroupList.get(index).add(i);
             }else {
-                FaceGroupList.get(group_cnt-1).add(i);
+                if (distance[i][group_cnt-1] > 10000) {
+                    FaceGroupList.get(index).add(i);
+                }else {
+                    FaceGroupList.get(group_cnt-1).add(i);
+                }
             }
         }
         for (int i = group_cnt; i < FaceGroupList.size(); i++) {
@@ -585,6 +594,100 @@ public class PLYModel {
         }
         System.out.println(cnt);
         return FaceGroupList;
+    }
+
+    public DoubleLinkedList[] getBorderLine() throws Exception {
+        this.makeGraph();
+        List<Integer>[] dot_graph = new ArrayList[dotList.size()];
+        for (int i = 0; i < dot_graph.length; i++) {
+            dot_graph[i] = new ArrayList<>();
+        }
+        for (int i = 0; i < graph.length; i++) {
+            Face faceA = faceList.get(i);
+            List<Integer> dot_indices = faceA.getDot_indices();
+            int a = dot_indices.get(0);
+            int b = dot_indices.get(1);
+            int c = dot_indices.get(2);
+            int cnt = 0;
+            for (int j = 0; j < 3; j++) {
+                if (graph[i][j] != -1) {
+                    cnt++;
+                }
+            }
+            if (cnt < 3) {
+                Boolean[] line = new Boolean[3];
+                Arrays.fill(line, true);
+                for (int j = 0; j < 3; j++) {
+                    if (graph[i][j] != -1) {
+                        Face faceB = faceList.get(graph[i][j]);
+                        List<Integer> dot_indicesB = faceB.getDot_indices();
+                        if (dot_indicesB.contains(a) && dot_indicesB.contains(b)) {
+                            line[0] = false;
+                        }else if (dot_indicesB.contains(b) && dot_indicesB.contains(c)) {
+                            line[1] = false;
+                        }else if (dot_indicesB.contains(a) && dot_indicesB.contains(c)) {
+                            line[2] = false;
+                        }
+                    }
+                }
+                if (line[0]) {
+                    dot_graph[a].add(b);
+                    dot_graph[b].add(a);
+                }
+                if (line[1]) {
+                    dot_graph[b].add(c);
+                    dot_graph[c].add(b);
+                }
+                if (line[2]) {
+                    dot_graph[a].add(c);
+                    dot_graph[c].add(a);
+                }
+            }
+        }
+        for (int i = 0; i < dot_graph.length; i++) {
+            if (dot_graph[i].size() != 0 && dot_graph[i].size() != 2) {
+                System.out.println(dot_graph[i].size());
+            }
+        }
+        DoubleLinkedList doubleLinkedList = new DoubleLinkedList();
+        int root = -1;
+        int[] visited = new int[dotList.size()];
+        DoubleLinkedList[] doubleLinkedLists = new DoubleLinkedList[2];
+        for (int cnt = 0; cnt < 2; cnt++) {
+            doubleLinkedLists[cnt] = new DoubleLinkedList();
+            while (doubleLinkedLists[cnt].size() < 50) {
+                doubleLinkedLists[cnt] = new DoubleLinkedList();
+                for (int i = root+1; i < dot_graph.length; i++) {
+                    if(dot_graph[i].size() == 2 && visited[i] == 0) {
+                        doubleLinkedLists[cnt].push_back(dotList.get(i));
+                        visited[i]++;
+                        root = i;
+                        break;
+                    }
+                }
+                int prev = root;
+                while (true) {
+                    if (dot_graph[prev].size() != 2) {
+                        System.out.println("wrong");
+                    }else {
+                        int a = dot_graph[prev].get(0);
+                        int b = dot_graph[prev].get(1);
+                        if (visited[a] == 0) {
+                            doubleLinkedLists[cnt].push_back(dotList.get(a));
+                            visited[a]++;
+                            prev = a;
+                        }else if (visited[b] == 0) {
+                            doubleLinkedLists[cnt].push_back(dotList.get(b));
+                            visited[b]++;
+                            prev = b;
+                        }else {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return doubleLinkedLists;
     }
 
     public PLYModel() {
