@@ -36,8 +36,9 @@ public class mainAlgorithm {
             faceList.add(face);
             elementB = readerTypeB.readElement();
         }
-        plyModel.setFaceList(faceList);
         readerTypeB.close();
+        plyModel.setFaceList(faceList);
+        plyModel.init();
         System.out.println("文件读取成功");
         return plyModel;
     }
@@ -79,58 +80,6 @@ public class mainAlgorithm {
         return plyModel;
     }
 
-    public static Vertex getNormalVertex(Dot A, Dot B, Dot C) {
-        Vertex vertexA = new Vertex(B.getX() - A.getX(), B.getY()-A.getY(), B.getZ()-A.getZ());
-        Vertex vertexB = new Vertex(C.getX() - A.getX(), C.getY()-A.getY(), C.getZ()-A.getZ());
-        double i = vertexA.getY()*vertexB.getZ() - vertexA.getZ()*vertexB.getY();
-        double j = vertexA.getZ()*vertexB.getX() - vertexA.getX()*vertexB.getZ();
-        double k = vertexA.getX()*vertexB.getY() - vertexA.getY()*vertexB.getX();
-        Vertex normal = new Vertex(i, j, k);
-        return normal;
-    }
-
-    public static List<List<Integer>> ClassifyFaceGroup(PLYModel plyModel, double threshold) {
-        plyModel.makeGraph();
-        int[][] graph = plyModel.getGraph();
-        List<Face> faceList = plyModel.getFaceList();
-        List<Dot> dotList = plyModel.getDotList();
-        List<List<Integer>> FaceGroupList = new ArrayList<>();
-        Boolean[] visited = new Boolean[faceList.size()];
-        Arrays.fill(visited, false);
-        for (int i = 0; i < faceList.size(); i++) {
-            if (visited[i] == true) {
-                continue;
-            }else {
-                List<Integer> list = new ArrayList<>();
-                Queue<Integer> queue = new LinkedList<>();
-                queue.add(i);
-                visited[i] = true;
-                while (!queue.isEmpty()) {
-                    int temp = queue.poll();
-                    Face FaceA = faceList.get(temp);
-                    list.add(temp);
-                    for (int j = 0; j < 3; j++) {
-                        int neighbor = graph[temp][j];
-                        if (visited[neighbor] == false) {
-                            Face FaceB = faceList.get(neighbor);
-                            Vertex VertexA = getNormalVertex(dotList.get(FaceA.getDot_indices().get(0)), dotList.get(FaceA.getDot_indices().get(1)), dotList.get(FaceA.getDot_indices().get(2)));
-                            Vertex VertexB = getNormalVertex(dotList.get(FaceB.getDot_indices().get(0)), dotList.get(FaceB.getDot_indices().get(1)), dotList.get(FaceB.getDot_indices().get(2)));
-                            double intermediate = VertexA.DotProduct(VertexB) / VertexA.getRank() / VertexB.getRank();
-                            double angle = Math.acos(intermediate) * 180 / Math.PI;
-                            angle = Math.min(angle, 180-angle);
-                            if (angle <= threshold) {
-                                queue.add(neighbor);
-                                visited[neighbor] = true;
-                            }
-                        }
-                    }
-                }
-                FaceGroupList.add(list);
-            }
-        }
-        return FaceGroupList;
-    }
-
     public static void writePLY(String ply_path, int threshold) throws IOException {
         PLYModel plyModel = readPLY(ply_path);
         List<Dot> dotList = plyModel.getDotList();
@@ -170,9 +119,9 @@ public class mainAlgorithm {
 
     public static void writeColorPLY(String ply_path, double threshold, int group_cnt) throws IOException {
         PLYModel plyModel = readPLY(ply_path);
-        plyModel.makeGraph();
+        plyModel.makeFaceGraph();
         plyModel.ClassifyFaceGroup(threshold);
-        plyModel.UnionSmallGroup4(group_cnt);
+//        plyModel.UnionSmallGroup4(group_cnt);
         List<Dot> dotList = plyModel.getDotList();
         List<Face> faceList = plyModel.getFaceList();
         List<List<Integer>> FaceGroupList = plyModel.getFaceGroupList();
@@ -218,7 +167,7 @@ public class mainAlgorithm {
 
     public static void writeData(String ply_path, double threshold, int group_cnt) throws IOException {
         PLYModel plyModel = readPLY(ply_path);
-        plyModel.makeGraph();
+        plyModel.makeFaceGraph();
         plyModel.ClassifyFaceGroup(threshold);
         plyModel.UnionSmallGroup1(group_cnt);
         List<Dot> dotList = plyModel.getDotList();
@@ -258,7 +207,7 @@ public class mainAlgorithm {
 
     public static void writeSectionPLY(String ply_path, double threshold, int group_cnt) throws IOException {
         PLYModel plyModel = readPLY(ply_path);
-        plyModel.makeGraph();
+        plyModel.makeFaceGraph();
         plyModel.ClassifyFaceGroup(threshold);
         plyModel.UnionSmallGroup2(group_cnt);
         List<Dot> dotList = plyModel.getDotList();
@@ -320,7 +269,7 @@ public class mainAlgorithm {
 
     public static void rewriteSectionPLY(String ply_path, double threshold, int group_cnt) throws IOException {
         PLYModel plyModel = readPLY(ply_path);
-        plyModel.makeGraph();
+        plyModel.makeFaceGraph();
         plyModel.ClassifyFaceGroup(threshold);
         plyModel.UnionSmallGroup(group_cnt);
         List<Dot> dotList = plyModel.getDotList();
@@ -420,10 +369,142 @@ public class mainAlgorithm {
         }
     }
 
+    public static void writeGaussianPLY(String ply_path) throws IOException {
+        PLYModel plyModel = readPLY(ply_path);
+        List<Dot> dotList = plyModel.getDotList();
+        List<Face> faceList = plyModel.getFaceList();
+        String target_path = ply_path.substring(0, ply_path.length()-4) + "_gaussian.ply";
+        try {
+            BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
+            out.write("ply\n" +
+                    "format ascii 1.0\n" +
+                    "element vertex " + dotList.size() + "\n");
+            out.write("property float x\n" +
+                    "property float y\n" +
+                    "property float z\n");
+            out.write("property uchar red\n" +
+                    "property uchar green\n" +
+                    "property uchar blue\n");
+            out.write("element face " + faceList.size() + "\n");
+            out.write("property list uchar int vertex_indices\n");
+            out.write("end_header\n");
+            Color Red = new Color(255, 0, 0);
+            Color Green = new Color(0, 255, 0);
+            Color Blue = new Color(0, 0, 255);
+            for (Dot dot : dotList) {
+                double K = dot.getK();
+                if (K > 0) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Blue.toColor() + " \n");
+                }else if (K < 0) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Red.toColor() + " \n");
+                }else {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Green.toColor() + " \n");
+                }
+            }
+            for (Face face : faceList) {
+                List<Integer> dot_indices = face.getDot_indices();
+                out.write(dot_indices.size() + " ");
+                out.write(dot_indices.get(0) + " " + dot_indices.get(1) + " " + dot_indices.get(2)+ " \n");
+            }
+            out.close();
+            System.out.println("GaussianPLY写入成功");
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void writeMeanPLY(String ply_path) throws IOException {
+        PLYModel plyModel = readPLY(ply_path);
+        List<Dot> dotList = plyModel.getDotList();
+        List<Face> faceList = plyModel.getFaceList();
+        String target_path = ply_path.substring(0, ply_path.length()-4) + "_mean.ply";
+        try {
+            BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
+            out.write("ply\n" +
+                    "format ascii 1.0\n" +
+                    "element vertex " + dotList.size() + "\n");
+            out.write("property float x\n" +
+                    "property float y\n" +
+                    "property float z\n");
+            out.write("property uchar red\n" +
+                    "property uchar green\n" +
+                    "property uchar blue\n");
+            out.write("element face " + faceList.size() + "\n");
+            out.write("property list uchar int vertex_indices\n");
+            out.write("end_header\n");
+            Color Red = new Color(255, 0, 0);
+            Color Green = new Color(0, 255, 0);
+            Color Blue = new Color(0, 0, 255);
+            for (Dot dot : dotList) {
+                double H = dot.getH();
+                if (H > 0.3) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Blue.toColor() + " \n");
+                }else if (H < 0.3) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Red.toColor() + " \n");
+                }else {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Green.toColor() + " \n");
+                }
+            }
+            for (Face face : faceList) {
+                List<Integer> dot_indices = face.getDot_indices();
+                out.write(dot_indices.size() + " ");
+                out.write(dot_indices.get(0) + " " + dot_indices.get(1) + " " + dot_indices.get(2)+ " \n");
+            }
+            out.close();
+            System.out.println("GaussianPLY写入成功");
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void writeK2PLY(String ply_path) throws IOException {
+        PLYModel plyModel = readPLY(ply_path);
+        List<Dot> dotList = plyModel.getDotList();
+        List<Face> faceList = plyModel.getFaceList();
+        String target_path = ply_path.substring(0, ply_path.length()-4) + "_k2.ply";
+        try {
+            BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
+            out.write("ply\n" +
+                    "format ascii 1.0\n" +
+                    "element vertex " + dotList.size() + "\n");
+            out.write("property float x\n" +
+                    "property float y\n" +
+                    "property float z\n");
+            out.write("property uchar red\n" +
+                    "property uchar green\n" +
+                    "property uchar blue\n");
+            out.write("element face " + faceList.size() + "\n");
+            out.write("property list uchar int vertex_indices\n");
+            out.write("end_header\n");
+            Color Red = new Color(255, 0, 0);
+            Color Green = new Color(0, 255, 0);
+            Color Blue = new Color(0, 0, 255);
+            for (Dot dot : dotList) {
+                double k2 = dot.getK2();
+                if (k2 > 0) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Blue.toColor() + " \n");
+                }else if (k2 < 0) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Red.toColor() + " \n");
+                }else {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Green.toColor() + " \n");
+                }
+            }
+            for (Face face : faceList) {
+                List<Integer> dot_indices = face.getDot_indices();
+                out.write(dot_indices.size() + " ");
+                out.write(dot_indices.get(0) + " " + dot_indices.get(1) + " " + dot_indices.get(2)+ " \n");
+            }
+            out.close();
+            System.out.println("GaussianPLY写入成功");
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void main(String[] args) throws Exception {
-        String ply_path = "C:\\Users\\what1\\IdeaProjects\\kaogu-master\\src\\main\\resources\\static\\polygons\\sa1_section.ply";
+        String ply_path = "C:\\Users\\what1\\IdeaProjects\\kaogu-master\\src\\main\\resources\\static\\polygons\\sa1.ply";
         long start = new Date().getTime();
-        writeBorderPLY(ply_path);
+        writeMeanPLY(ply_path);
         long end = new Date().getTime();
         System.out.println((end-start));
     }

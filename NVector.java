@@ -1,6 +1,6 @@
 package com.kaogu.Algorithm;
 
-public class Vertex {
+public class NVector {
 
     public double x;
     public double y;
@@ -30,9 +30,16 @@ public class Vertex {
         this.z = z;
     }
 
-    public Vertex() {}
+    public NVector add(NVector vector) {
+        x += vector.getX();
+        y += vector.getY();
+        z += vector.getZ();
+        return this;
+    }
 
-    public Vertex(double x, double y, double z) {
+    public NVector() {}
+
+    public NVector(double x, double y, double z) {
         this.x = x;
         this.y = y;
         this.z = z;
@@ -43,8 +50,8 @@ public class Vertex {
         return res;
     }
 
-    public double DotProduct(Vertex vertex) {
-        double product = x * vertex.getX() + y * vertex.getY() + z * vertex.getZ();
+    public double DotProduct(NVector nVector) {
+        double product = x * nVector.getX() + y * nVector.getY() + z * nVector.getZ();
         return product;
     }
 }

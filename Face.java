@@ -5,6 +5,8 @@ import java.util.List;
 public class Face {
 
     private List<Integer> dot_indices;
+    private List<Double> angles;
+    private NVector nVector;
     private Color color;
 
     public List<Integer> getDot_indices() {
@@ -13,6 +15,22 @@ public class Face {
 
     public void setDot_indices(List<Integer> dot_indices) {
         this.dot_indices = dot_indices;
+    }
+
+    public NVector getNVector() {
+        return nVector;
+    }
+
+    public void setNVector(NVector nVector) {
+        this.nVector = nVector;
+    }
+
+    public List<Double> getAngles() {
+        return angles;
+    }
+
+    public void setAngles(List<Double> angles) {
+        this.angles = angles;
     }
 
     public Color getColor() {

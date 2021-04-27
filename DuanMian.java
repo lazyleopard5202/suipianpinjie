@@ -42,17 +42,6 @@ public class DuanMian {
         return plyModel;
     }
 
-    public static Vertex getNormalVertex(Dot A, Dot B, Dot C) {
-        Vertex vertexA = new Vertex(B.getX() - A.getX(), B.getY()-A.getY(), B.getZ()-A.getZ());
-        Vertex vertexB = new Vertex(C.getX() - A.getX(), C.getY()-A.getY(), C.getZ()-A.getZ());
-        //a×b=（）i+（）j+（）k，为了帮助记忆，利用三阶行列式，
-        double i = vertexA.getY()*vertexB.getZ() - vertexA.getZ()*vertexB.getY();
-        double j = vertexA.getZ()*vertexB.getX() - vertexA.getX()*vertexB.getZ();
-        double k = vertexA.getX()*vertexB.getY() - vertexA.getY()*vertexB.getX();
-        Vertex normal = new Vertex(i, j, k);
-        return normal;
-    }
-
     public static List<List<Integer>> findFaceGroup(PLYModel plyModel, double threshold) {
         List<Dot> dotList = plyModel.getDotList();
         List<Face> faceList = plyModel.getFaceList();
@@ -77,10 +66,10 @@ public class DuanMian {
                     if (cnt >= 2) {
                         Face FaceA = face;
                         Face FaceB = faceList.get(face_index);
-                        Vertex VertexA = getNormalVertex(dotList.get(FaceA.getDot_indices().get(0)), dotList.get(FaceA.getDot_indices().get(1)), dotList.get(FaceA.getDot_indices().get(2)));
-                        Vertex VertexB = getNormalVertex(dotList.get(FaceB.getDot_indices().get(0)), dotList.get(FaceB.getDot_indices().get(1)), dotList.get(FaceB.getDot_indices().get(2)));
-                        double temp = dotProduct(VertexA, VertexB) / VertexA.getRank() / VertexB.getRank();
-                        double angle = Math.acos(temp) * 180 / Math.PI;
+                        NVector VectorA = FaceA.getNVector();
+                        NVector VectorB = FaceB.getNVector();
+                        double intermediate = VectorA.DotProduct(VectorB) / VectorA.getRank() / VectorB.getRank();
+                        double angle = Math.acos(intermediate) * 180 / Math.PI;
                         angle = Math.min(angle, 180-angle);
                         if (angle <= threshold) {
                             if (GroupIndices.size() == 0) {
@@ -272,10 +261,10 @@ public class DuanMian {
                         hashMap.put(ki, face);
                         hashMap.put(jk, face);
                         Face FaceB = hashMap.get(temp_line);
-                        Vertex VertexA = getNormalVertex(dotList.get(FaceA.getDot_indices().get(0)), dotList.get(FaceA.getDot_indices().get(1)), dotList.get(FaceA.getDot_indices().get(2)));
-                        Vertex VertexB = getNormalVertex(dotList.get(FaceB.getDot_indices().get(0)), dotList.get(FaceB.getDot_indices().get(1)), dotList.get(FaceB.getDot_indices().get(2)));
-                        double temp = dotProduct(VertexA, VertexB) / VertexA.getRank() / VertexB.getRank();
-                        double angle = Math.acos(temp) * 180 / Math.PI;
+                        NVector VectorA = FaceA.getNVector();
+                        NVector VectorB = FaceB.getNVector();
+                        double intermediate = VectorA.DotProduct(VectorB) / VectorA.getRank() / VectorB.getRank();
+                        double angle = Math.acos(intermediate) * 180 / Math.PI;
                         angle = Math.min(angle, 180-angle);
                         if (angle <= threshold) {
                             LineGroupList.get(l).remove(temp_line);
@@ -397,11 +386,6 @@ public class DuanMian {
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public static double dotProduct(Vertex A, Vertex B) {
-        double res = A.getX()*B.getX() + A.getY()*B.getY() + A.getZ()*B.getZ();
-        return res;
     }
 
     public static void main(String[] args) throws IOException {

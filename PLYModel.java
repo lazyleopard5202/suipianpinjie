@@ -7,45 +7,53 @@ public class PLYModel {
     private List<Dot> dotList;    //记录点
     private List<Face> faceList;  //记录小三角形
     private List<List<Integer>> FaceGroupList; //记录FaceGroup，每一组FaceGroup中记录的是face的序号
-    private int[][] graph;  //记录小三角形和哪三个小三角形相邻，graph = new int[dotlist,size][3],记录的是三个小三角形的序号
+    private int[][] face_graph;  //记录小三角形和哪三个小三角形相邻，graph = new int[dotlist,size][3],记录的是三个小三角形的序号
+    private Set<Integer>[] dot_face_graph;
 
-    public int[][] getGraph() {
-        return graph;
-    }
-
-    public void setGraph(int[][] graph) {
-        this.graph = graph;
+    public int[][] getFace_graph() {
+        return makeFaceGraph();
     }
 
     public List<List<Integer>> getFaceGroupList() {
         return FaceGroupList;
     }
 
-    public void setFaceGroupList(List<List<Integer>> faceGroupList) {
-        FaceGroupList = faceGroupList;
-    }
-
     public List<Dot> getDotList() {
         return dotList;
-    }
-
-    public void setDotList(List<Dot> dotList) {
-        this.dotList = dotList;
     }
 
     public List<Face> getFaceList() {
         return faceList;
     }
 
+    public void setDotList(List<Dot> dotList) {
+        this.dotList = dotList;
+    }
+
     public void setFaceList(List<Face> faceList) {
         this.faceList = faceList;
     }
 
+    public void calNVectors() {
+        for (Face face : faceList) {
+            List<Integer> dot_indices = face.getDot_indices();
+            Dot dotA = dotList.get(dot_indices.get(0));
+            Dot dotB = dotList.get(dot_indices.get(1));
+            Dot dotC = dotList.get(dot_indices.get(2));
+            NVector vectorA = new NVector(dotA.getX()-dotB.getX(), dotA.getY()-dotB.getY(), dotA.getZ()- dotB.getZ());
+            NVector vectorB = new NVector(dotA.getX()-dotC.getX(), dotA.getY()-dotC.getY(), dotA.getZ()- dotC.getZ());
+            double i = vectorA.getY()*vectorB.getZ() - vectorA.getZ()*vectorB.getY();
+            double j = vectorA.getZ()*vectorB.getX() - vectorA.getX()*vectorB.getZ();
+            double k = vectorA.getX()*vectorB.getY() - vectorA.getY()*vectorB.getX();
+            NVector nVector = new NVector(i, j, k);
+            face.setNVector(nVector);
+        }
+    }
 
     //生成图
-    public void makeGraph() {
-        this.graph = new int[faceList.size()][3];
-        for (int[] temp : graph) {
+    public int[][] makeFaceGraph() {
+        this.face_graph = new int[faceList.size()][3];
+        for (int[] temp : face_graph) {
             Arrays.fill(temp, -1);
         }
         long dot_size = dotList.size();
@@ -86,13 +94,274 @@ public class PLYModel {
                     hashMap.put(temp, i);
                 }else {
                     int face_index = hashMap.get(temp);
-                    graph[face_index][size[face_index]] = i;
+                    face_graph[face_index][size[face_index]] = i;
                     size[face_index]++;
-                    graph[i][size[i]] = face_index;
+                    face_graph[i][size[i]] = face_index;
                     size[i]++;
                 }
             }
         }
+        return face_graph;
+    }
+
+    public void makeDotFaceGraph() {
+        if (face_graph == null) {
+            makeFaceGraph();
+        }
+        dot_face_graph = new Set[dotList.size()];
+        for (int i = 0; i < dot_face_graph.length; i++) {
+            dot_face_graph[i] = new HashSet<>();
+        }
+        for (int i = 0; i < faceList.size(); i++) {
+            Face face = faceList.get(i);
+            List<Integer> dot_indices = face.getDot_indices();
+            int a = dot_indices.get(0);
+            int b = dot_indices.get(1);
+            int c = dot_indices.get(2);
+            dot_face_graph[a].add(i);
+            dot_face_graph[b].add(i);
+            dot_face_graph[c].add(i);
+        }
+    }
+
+    public void calAngles() {
+        for (Face face : faceList){
+            ArrayList<Double> angles = new ArrayList<>();
+            List<Integer> dot_indices = face.getDot_indices();
+            int a = dot_indices.get(0);
+            int b = dot_indices.get(1);
+            int c = dot_indices.get(2);
+            Dot dotA = dotList.get(a);
+            Dot dotB = dotList.get(b);
+            Dot dotC = dotList.get(c);
+            NVector vectorAB = new NVector(dotB.getX()-dotA.getX(), dotB.getY()- dotA.getY(), dotB.getZ()-dotA.getZ());
+            NVector vectorAC = new NVector(dotC.getX()-dotA.getX(), dotC.getY()- dotA.getY(), dotC.getZ()-dotA.getZ());
+            NVector vectorBA = new NVector(-vectorAB.getX(), -vectorAB.getY(), -vectorAB.getZ());
+            NVector vectorBC = new NVector(dotC.getX()-dotB.getX(), dotC.getY()- dotB.getY(), dotC.getZ()-dotB.getZ());
+            NVector vectorCA = new NVector(-vectorAC.getX(), -vectorAC.getY(), -vectorAC.getZ());
+            NVector vectorCB = new NVector(-vectorBC.getX(), -vectorBC.getY(), -vectorBC.getZ());
+            double intermediate = vectorAB.DotProduct(vectorAC) / vectorAB.getRank() / vectorAC.getRank();
+            double angle = Math.acos(intermediate);
+            angles.add(angle);
+            intermediate = vectorBA.DotProduct(vectorBC) / vectorBA.getRank() / vectorBC.getRank();
+            angle = Math.acos(intermediate);
+            angles.add(angle);
+            intermediate = vectorCA.DotProduct(vectorCB) / vectorCA.getRank() / vectorCB.getRank();
+            angle = Math.acos(intermediate);
+            angles.add(angle);
+            face.setAngles(angles);
+        }
+    }
+
+    public void calVAreas() {
+        for (int i = 0; i < dot_face_graph.length; i++) {
+            double area = 0;
+            Iterator<Integer> iterator = dot_face_graph[i].iterator();
+            while (iterator.hasNext()) {
+                int f = iterator.next();
+                Face face = faceList.get(f);
+                List<Integer> dot_indices = face.getDot_indices();
+                List<Double> angles = face.getAngles();
+                int index = -1;
+                for (int j = 0; j < dot_indices.size(); j++) {
+                    if (dot_indices.get(j) == i) {
+                        index = j;
+                        break;
+                    }
+                }
+                if (index < 0) {
+                    System.out.println("calVArea wrong");
+                }
+                Dot dotA = dotList.get(dot_indices.get(0));
+                Dot dotB = dotList.get(dot_indices.get(1));
+                Dot dotC = dotList.get(dot_indices.get(2));
+                double angleA = angles.get(0);
+                double angleB = angles.get(1);
+                double angleC = angles.get(2);
+                double angle90 = Math.PI/2;
+                double temp = 0;
+                if (index == 0) {
+                    NVector vectorAB = new NVector(dotB.getX()-dotA.getX(), dotB.getY()- dotA.getY(), dotB.getZ()-dotA.getZ());
+                    NVector vectorAC = new NVector(dotC.getX()-dotA.getX(), dotC.getY()- dotA.getY(), dotC.getZ()-dotA.getZ());
+                    temp = (Math.pow(vectorAB.getRank(), 2) / Math.tan(angleC) + Math.pow(vectorAC.getRank(), 2) / Math.tan(angleB)) / 8;
+                }else if (index == 1) {
+                    NVector vectorBA = new NVector(dotA.getX()-dotB.getX(), dotA.getY()- dotB.getY(), dotA.getZ()-dotB.getZ());
+                    NVector vectorBC = new NVector(dotC.getX()-dotB.getX(), dotC.getY()- dotB.getY(), dotC.getZ()-dotB.getZ());
+                    temp = (Math.pow(vectorBA.getRank(), 2) / Math.tan(angleC) + Math.pow(vectorBC.getRank(), 2) / Math.tan(angleC)) / 8;
+                }else if (index == 2) {
+                    NVector vectorCA = new NVector(dotA.getX()-dotC.getX(), dotA.getY()- dotC.getY(), dotA.getZ()-dotC.getZ());
+                    NVector vectorCB = new NVector(dotC.getX()-dotB.getX(), dotC.getY()- dotB.getY(), dotC.getZ()-dotB.getZ());
+                    temp = (Math.pow(vectorCA.getRank(), 2) / Math.tan(angleB) + Math.pow(vectorCB.getRank(), 2) / Math.tan(angleA)) / 8;
+                }
+                if (angleA <= angle90 && angleB <= angle90 && angleC <= angle90) {
+                    area += temp;
+                }else {
+                    if (index == 0) {
+                        if (angleA > angle90) {
+                            area += temp/2;
+                        }else {
+                            area += temp/4;
+                        }
+                    }else if (index == 1) {
+                        if (angleB > angle90) {
+                            area += temp/2;
+                        }else {
+                            area += temp/4;
+                        }
+                    }else if (index == 2) {
+                        if (angleC > angle90) {
+                            area += temp/2;
+                        }else {
+                            area += temp/4;
+                        }
+                    }
+                }
+            }
+            dotList.get(i).setVArea(area);
+        }
+    }
+
+    public void makeGaussianCurvatures() {
+        for (int i = 0; i < dotList.size(); i++) {
+            Dot dot = dotList.get(i);
+            double area = dot.getVArea();
+            double angle = 0;
+            Iterator<Integer> iterator = dot_face_graph[i].iterator();
+            while (iterator.hasNext()) {
+                int f = iterator.next();
+                Face face = faceList.get(f);
+                List<Integer> dot_indices = face.getDot_indices();
+                int index = -1;
+                for (int j = 0; j < dot_indices.size(); j++) {
+                    if (dot_indices.get(j) == i) {
+                        index = j;
+                        break;
+                    }
+                }
+                angle += face.getAngles().get(index);
+            }
+            double res = (2*Math.PI - angle) / area;
+            dot.setK(res);
+        }
+    }
+
+    public void makeMeanCurvatures() {
+        for (int i = 0; i < dotList.size(); i++) {
+            Dot dot = dotList.get(i);
+            double area = dot.getVArea();
+            NVector ans = new NVector(0,0,0);
+            double res = 0;
+            Iterator<Integer> iterator = dot_face_graph[i].iterator();
+            HashSet<Integer> hashSet = new HashSet<>();
+            while (iterator.hasNext()) {
+                int f = iterator.next();
+                Face face = faceList.get(f);
+                List<Integer> dot_indices = face.getDot_indices();
+                int indexA = -1;
+                int indexB = -1;
+                int indexC = -1;
+                Boolean first = false;
+                for (int j = 0; j < dot_indices.size(); j++) {
+                    int dot_index = dot_indices.get(j);
+                    if (dot_index == i) {
+                        indexA = j;
+                    }else {
+                        if (!first) {
+                            indexB = j;
+                            first = true;
+                        }else {
+                            indexC = j;
+                        }
+                    }
+                }
+                int dotA_index = dot_indices.get(indexA);
+                int dotB_index = dot_indices.get(indexB);
+                int dotC_index = dot_indices.get(indexC);
+                Dot dotA = dotList.get(dotA_index);
+                Dot dotB = dotList.get(dotB_index);
+                Dot dotC = dotList.get(dotC_index);
+                NVector ret = new NVector(0, 0, 0);
+                if (!hashSet.contains(dotB_index)) {
+                    NVector vectorBA = new NVector(dotA.getX()-dotB.getX(), dotA.getY()- dotB.getY(), dotA.getZ()-dotB.getZ());
+                    for (int j = 0; j < face_graph[f].length; j++) {
+                        Face neighbor = faceList.get(face_graph[f][j]);
+                        List<Integer> neighbor_dot_indices = neighbor.getDot_indices();
+                        int cnt = 0;
+                        int indexD = 0;
+                        int[] arr = new int[3];
+                        for (int k = 0; k < 3; k++) {
+                            int index = neighbor_dot_indices.get(k);
+                            if (dotA_index == index | dotB_index == index | dotC_index == index) {
+                                arr[k] += 1;
+                                cnt++;
+                            }else {
+                                indexD = k;
+                            }
+                        }
+                        if (cnt == 2) {
+                            double angleC = face.getAngles().get(indexC);
+                            double angleD = neighbor.getAngles().get(indexD);
+                            double temp = (1 / Math.tan(angleC) + 1 / Math.tan(angleD));
+                            ret = new NVector(temp*vectorBA.getX(), temp*vectorBA.getY(), temp*vectorBA.getZ());
+                        }
+                    }
+                    hashSet.add(dotB_index);
+                }else if (!hashSet.contains(dotC_index)) {
+                    NVector vectorCA = new NVector(dotA.getX()-dotC.getX(), dotA.getY()- dotC.getY(), dotA.getZ()-dotC.getZ());
+                    for (int j = 0; j < face_graph[f].length; j++) {
+                        Face neighbor = faceList.get(face_graph[f][j]);
+                        List<Integer> neighbor_dot_indices = neighbor.getDot_indices();
+                        int cnt = 0;
+                        int indexD = 0;
+                        int[] arr = new int[3];
+                        for (int k = 0; k < 3; k++) {
+                            int index = neighbor_dot_indices.get(k);
+                            if (dotA_index == index | dotB_index == index | dotC_index == index) {
+                                arr[k] += 1;
+                                cnt++;
+                            }else {
+                                indexD = k;
+                            }
+                        }
+                        if (cnt == 2) {
+                            double angleB = face.getAngles().get(indexB);
+                            double angleD = neighbor.getAngles().get(indexD);
+                            double temp = (1 / Math.tan(angleB) + 1 / Math.tan(angleD));
+                            ret = new NVector(temp*vectorCA.getX(), temp*vectorCA.getY(), temp*vectorCA.getZ());
+                        }
+                    }
+                    hashSet.add(dotC_index);
+                }
+                ans.add(ret);
+            }
+            double H = ans.getRank() / 4 / area;
+            dot.setH(H);
+        }
+    }
+
+    public void makeK1K2() {
+        for (int i = 0; i < dotList.size(); i++) {
+            Dot dot = dotList.get(i);
+            double H = dot.getH();
+            double K = dot.getK();
+//            System.out.println(i + ": H = " + H + ", K = " + K);
+            double temp = Math.pow((Math.pow(H,2) - K), 0.5);
+            double K1 = H + temp;
+            double K2 = H - temp;
+            dot.setK1(K1);
+            dot.setK2(K2);
+        }
+    }
+
+    public void init() {
+        makeFaceGraph();
+        makeDotFaceGraph();
+        calAngles();
+        calNVectors();
+        calVAreas();
+        makeGaussianCurvatures();
+        makeMeanCurvatures();
+        makeK1K2();
     }
 
     public void test() {
@@ -122,7 +391,7 @@ public class PLYModel {
 
     //根据法向量夹角阈值分组，threshold为夹角阈值，核心想法是bfs
     public List<List<Integer>> ClassifyFaceGroup(double threshold) {
-        this.makeGraph();
+        this.makeFaceGraph();
         Boolean[] visited = new Boolean[faceList.size()];
         Arrays.fill(visited, false);
         for (int i = 0; i < faceList.size(); i++) {
@@ -138,12 +407,12 @@ public class PLYModel {
                     Face FaceA = faceList.get(temp);
                     list.add(temp);
                     for (int j = 0; j < 3; j++) {
-                        int neighbor = graph[temp][j];
+                        int neighbor = face_graph[temp][j];
                         if (visited[neighbor] == false) {
                             Face FaceB = faceList.get(neighbor);
-                            Vertex VertexA = mainAlgorithm.getNormalVertex(dotList.get(FaceA.getDot_indices().get(0)), dotList.get(FaceA.getDot_indices().get(1)), dotList.get(FaceA.getDot_indices().get(2)));
-                            Vertex VertexB = mainAlgorithm.getNormalVertex(dotList.get(FaceB.getDot_indices().get(0)), dotList.get(FaceB.getDot_indices().get(1)), dotList.get(FaceB.getDot_indices().get(2)));
-                            double intermediate = VertexA.DotProduct(VertexB) / VertexA.getRank() / VertexB.getRank();
+                            NVector VectorA = FaceA.getNVector();
+                            NVector VectorB = FaceB.getNVector();
+                            double intermediate = VectorA.DotProduct(VectorB) / VectorA.getRank() / VectorB.getRank();
                             double angle = Math.acos(intermediate) * 180 / Math.PI;
                             angle = Math.min(angle, 180-angle);
                             if (angle <= threshold) {
@@ -197,14 +466,14 @@ public class PLYModel {
             temp_visited[root] = true;
             while (!priorityQueue.isEmpty()) {
                 int temp = priorityQueue.poll().getIndex();
-                int[] Face_index = graph[temp];
+                int[] Face_index = face_graph[temp];
                 for (int j : Face_index) {
                     if (!temp_visited[j]) {
                         Face FaceA = faceList.get(j);
                         Face FaceB = faceList.get(temp);
-                        Vertex VertexA = mainAlgorithm.getNormalVertex(dotList.get(FaceA.getDot_indices().get(0)), dotList.get(FaceA.getDot_indices().get(1)), dotList.get(FaceA.getDot_indices().get(2)));
-                        Vertex VertexB = mainAlgorithm.getNormalVertex(dotList.get(FaceB.getDot_indices().get(0)), dotList.get(FaceB.getDot_indices().get(1)), dotList.get(FaceB.getDot_indices().get(2)));
-                        double intermediate = VertexA.DotProduct(VertexB) / VertexA.getRank() / VertexB.getRank();
+                        NVector VectorA = FaceA.getNVector();
+                        NVector VectorB = FaceB.getNVector();
+                        double intermediate = VectorA.DotProduct(VectorB) / VectorA.getRank() / VectorB.getRank();
                         double angle = Math.acos(intermediate) * 180 / Math.PI;
                         angle = Math.min(angle, 180-angle);
                         distance[j][i] = Math.min(distance[j][i], distance[temp][i] + angle);
@@ -268,7 +537,7 @@ public class PLYModel {
             queue.add(root);
             while (!queue.isEmpty()) {
                 int temp = queue.poll();
-                int[] Face_index = graph[temp];
+                int[] Face_index = face_graph[temp];
                 for (int j : Face_index) {
                     if (temp_visited[j] == 0) {
                         queue.add(j);
@@ -335,7 +604,7 @@ public class PLYModel {
             temp_visited[root] = true;
             while (!priorityQueue.isEmpty()) {
                 int temp = priorityQueue.poll().getIndex();
-                int[] Face_index = graph[temp];
+                int[] Face_index = face_graph[temp];
                 for (int j : Face_index) {
                     if (!temp_visited[j]) {
                         distance[j][i] = Math.min(distance[j][i], distance[temp][i] + 1);
@@ -422,14 +691,14 @@ public class PLYModel {
             temp_visited[root] = true;
             while (!priorityQueue.isEmpty()) {
                 int temp = priorityQueue.poll().getIndex();
-                int[] Face_index = graph[temp];
+                int[] Face_index = face_graph[temp];
                 for (int j : Face_index) {
                     if (!temp_visited[j]) {
                         Face FaceA = faceList.get(j);
                         Face FaceB = faceList.get(temp);
-                        Vertex VertexA = mainAlgorithm.getNormalVertex(dotList.get(FaceA.getDot_indices().get(0)), dotList.get(FaceA.getDot_indices().get(1)), dotList.get(FaceA.getDot_indices().get(2)));
-                        Vertex VertexB = mainAlgorithm.getNormalVertex(dotList.get(FaceB.getDot_indices().get(0)), dotList.get(FaceB.getDot_indices().get(1)), dotList.get(FaceB.getDot_indices().get(2)));
-                        double intermediate = VertexA.DotProduct(VertexB) / VertexA.getRank() / VertexB.getRank();
+                        NVector VectorA = FaceA.getNVector();
+                        NVector VectorB = FaceB.getNVector();
+                        double intermediate = VectorA.DotProduct(VectorB) / VectorA.getRank() / VectorB.getRank();
                         double angle = Math.acos(intermediate) * 180 / Math.PI;
                         angle = Math.min(angle, 180-angle);
                         distance[j][i] = Math.min(distance[j][i], distance[temp][i] + angle);
@@ -521,14 +790,14 @@ public class PLYModel {
             temp_visited[root] = true;
             while (!angle_priorityQueue.isEmpty()) {
                 int temp = angle_priorityQueue.poll().getIndex();
-                int[] Face_index = graph[temp];
+                int[] Face_index = face_graph[temp];
                 for (int j : Face_index) {
                     if (!temp_visited[j]) {
                         Face FaceA = faceList.get(j);
                         Face FaceB = faceList.get(temp);
-                        Vertex VertexA = mainAlgorithm.getNormalVertex(dotList.get(FaceA.getDot_indices().get(0)), dotList.get(FaceA.getDot_indices().get(1)), dotList.get(FaceA.getDot_indices().get(2)));
-                        Vertex VertexB = mainAlgorithm.getNormalVertex(dotList.get(FaceB.getDot_indices().get(0)), dotList.get(FaceB.getDot_indices().get(1)), dotList.get(FaceB.getDot_indices().get(2)));
-                        double intermediate = VertexA.DotProduct(VertexB) / VertexA.getRank() / VertexB.getRank();
+                        NVector VectorA = FaceA.getNVector();
+                        NVector VectorB = FaceB.getNVector();
+                        double intermediate = VectorA.DotProduct(VectorB) / VectorA.getRank() / VectorB.getRank();
                         double angle = Math.acos(intermediate) * 180 / Math.PI;
                         angle = Math.min(angle, 180-angle);
                         angle_distance[j][i] = Math.min(angle_distance[j][i], angle_distance[temp][i] + angle);
@@ -597,12 +866,12 @@ public class PLYModel {
     }
 
     public DoubleLinkedList[] getBorderLine() throws Exception {
-        this.makeGraph();
+        this.makeFaceGraph();
         List<Integer>[] dot_graph = new ArrayList[dotList.size()];
         for (int i = 0; i < dot_graph.length; i++) {
             dot_graph[i] = new ArrayList<>();
         }
-        for (int i = 0; i < graph.length; i++) {
+        for (int i = 0; i < face_graph.length; i++) {
             Face faceA = faceList.get(i);
             List<Integer> dot_indices = faceA.getDot_indices();
             int a = dot_indices.get(0);
@@ -610,7 +879,7 @@ public class PLYModel {
             int c = dot_indices.get(2);
             int cnt = 0;
             for (int j = 0; j < 3; j++) {
-                if (graph[i][j] != -1) {
+                if (face_graph[i][j] != -1) {
                     cnt++;
                 }
             }
@@ -618,8 +887,8 @@ public class PLYModel {
                 Boolean[] line = new Boolean[3];
                 Arrays.fill(line, true);
                 for (int j = 0; j < 3; j++) {
-                    if (graph[i][j] != -1) {
-                        Face faceB = faceList.get(graph[i][j]);
+                    if (face_graph[i][j] != -1) {
+                        Face faceB = faceList.get(face_graph[i][j]);
                         List<Integer> dot_indicesB = faceB.getDot_indices();
                         if (dot_indicesB.contains(a) && dot_indicesB.contains(b)) {
                             line[0] = false;
@@ -693,7 +962,7 @@ public class PLYModel {
     public PLYModel() {
         this.dotList = new ArrayList<>();
         this.faceList = new ArrayList<>();
-        this.graph = new int[dotList.size()][dotList.size()];
+        this.face_graph = new int[dotList.size()][dotList.size()];
         this.FaceGroupList = new ArrayList<>();
     }
 }
