@@ -73,4 +73,43 @@ public class DoubleLinkedList {
         DoubleLinkedNode node = getNode(index);
         return node;
     }
+
+    public int[] LCS(DoubleLinkedList pattern) {
+        int x = -1;
+        int y = -1;
+        int max = 0;
+        int[] ret = new int[3];
+        double standard = Math.pow(10, -5);
+        int[][] record = new int[size][pattern.size()];
+        DoubleLinkedNode node1 = head;
+        for (int i = 0; i < size; i++) {
+            node1 = node1.getNext();
+            DoubleLinkedNode node2 = pattern.getHead();
+            for (int j = 0; j < pattern.size(); j++) {
+                node2 = node2.getNext();
+                double res = node1.getDot().getK() + node2.getDot().getK();
+                if (res > -standard || res < standard) {
+                    if (i == 0 || j == 0) {
+                        record[i][j] = 1;
+                    }else {
+                        record[i][j] = record[i-1][j-1] + 1;
+                    }
+                    if (record[i][j] > max) {
+                        max = record[i][j];
+                        x = i;
+                        y = j;
+                    }
+                }else {
+                    record[i][j] = 0;
+                }
+            }
+        }
+        x = x + 1 - max;
+        y = y + 1 - max;
+        ret[0] = x;
+        ret[1] = y;
+        ret[2] = max;
+        return ret;
+    }
+
 }

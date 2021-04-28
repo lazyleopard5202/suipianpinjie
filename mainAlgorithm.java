@@ -119,13 +119,17 @@ public class mainAlgorithm {
 
     public static void writeColorPLY(String ply_path, double threshold, int group_cnt) throws IOException {
         PLYModel plyModel = readPLY(ply_path);
-        plyModel.makeFaceGraph();
         plyModel.ClassifyFaceGroup(threshold);
-//        plyModel.UnionSmallGroup4(group_cnt);
+        String target_path = "target.ply";
+        if (group_cnt == 0) {
+            target_path = ply_path.substring(0, ply_path.length()-4) + "_t" + threshold + ".ply";
+        }else {
+            plyModel.UnionSmallGroup4(group_cnt);
+            target_path = ply_path.substring(0, ply_path.length()-4) + "_t" + threshold + "_c" + group_cnt + ".ply";
+        }
         List<Dot> dotList = plyModel.getDotList();
         List<Face> faceList = plyModel.getFaceList();
         List<List<Integer>> FaceGroupList = plyModel.getFaceGroupList();
-        String target_path = ply_path.substring(0, ply_path.length()-4) + "_t" + threshold + "_c" + group_cnt + ".ply";
         for (int i = 0; i < FaceGroupList.size(); i++) {
             List<Integer> FaceGroup = FaceGroupList.get(i);
             Color color = new Color((int)(255*Math.random()), (int)(255*Math.random()), (int)(255*Math.random()));
@@ -207,9 +211,8 @@ public class mainAlgorithm {
 
     public static void writeSectionPLY(String ply_path, double threshold, int group_cnt) throws IOException {
         PLYModel plyModel = readPLY(ply_path);
-        plyModel.makeFaceGraph();
         plyModel.ClassifyFaceGroup(threshold);
-        plyModel.UnionSmallGroup2(group_cnt);
+        plyModel.UnionSmallGroup4(group_cnt);
         List<Dot> dotList = plyModel.getDotList();
         List<Face> faceList = plyModel.getFaceList();
         List<List<Integer>> FaceGroupList = plyModel.getFaceGroupList();
@@ -267,67 +270,60 @@ public class mainAlgorithm {
         }
     }
 
-    public static void rewriteSectionPLY(String ply_path, double threshold, int group_cnt) throws IOException {
+    public static void DeNoisedSectionPLY(String ply_path) throws IOException {
         PLYModel plyModel = readPLY(ply_path);
-        plyModel.makeFaceGraph();
-        plyModel.ClassifyFaceGroup(threshold);
-        plyModel.UnionSmallGroup(group_cnt);
+        plyModel.removeNoise();
         List<Dot> dotList = plyModel.getDotList();
         List<Face> faceList = plyModel.getFaceList();
-        List<List<Integer>> FaceGroupList = plyModel.getFaceGroupList();
-        for (int i = 0; i < group_cnt; i++) {
-            String target_path = ply_path.substring(0, ply_path.length()-4) + i + ".ply";
-            List<Integer> FaceGroup = FaceGroupList.get(i);
-            HashSet<Integer> hashSet = new HashSet<>();
-            HashMap<Integer, Integer> hashMap = new HashMap<>();
-            int cnt = 0;
-            PriorityQueue<Integer> priorityQueue = new PriorityQueue<>(new Comparator<Integer>() {
-                @Override
-                public int compare(Integer o1, Integer o2) {
-                    return o1 - o2;
+        String target_path = ply_path.substring(0, ply_path.length()-4) + "_denoised.ply";
+        HashSet<Integer> hashSet = new HashSet<>();
+        HashMap<Integer, Integer> hashMap = new HashMap<>();
+        int cnt = 0;
+        PriorityQueue<Integer> priorityQueue = new PriorityQueue<>(new Comparator<Integer>() {
+            @Override
+            public int compare(Integer o1, Integer o2) {
+                return o1 - o2;
+            }
+        });
+        for (Face face : faceList) {
+            List<Integer> dot_indices = face.getDot_indices();
+            for (int d : dot_indices) {
+                if (!hashSet.contains(d)) {
+                    hashSet.add(d);
+                    priorityQueue.add(d);
                 }
-            });
-            for (int j : FaceGroup) {
-                Face face = faceList.get(j);
+            }
+        }
+        try {
+            BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
+            out.write("ply\n" +
+                    "format ascii 1.0\n" +
+                    "element vertex " + priorityQueue.size() + "\n");
+            out.write("property float x\n" +
+                    "property float y\n" +
+                    "property float z\n");
+            out.write("element face " + faceList.size() + "\n");
+            out.write("property list uchar int vertex_indices\n");
+            out.write("end_header\n");
+            while (!priorityQueue.isEmpty()) {
+                int temp = priorityQueue.poll();
+                Dot dot = dotList.get(temp);
+                hashMap.put(temp, cnt);
+                cnt++;
+                out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + "\n");
+            }
+            for (Face face : faceList) {
                 List<Integer> dot_indices = face.getDot_indices();
-                for (int d : dot_indices) {
-                    if (!hashSet.contains(d)) {
-                        hashSet.add(d);
-                        priorityQueue.add(d);
-                    }
+                out.write(dot_indices.size() + " ");
+                for (int j : dot_indices) {
+                    out.write(hashMap.get(j) + " ");
                 }
+                out.write("\n");
             }
-            try {
-                BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
-                out.write("ply\n" +
-                        "format ascii 1.0\n" +
-                        "element vertex " + priorityQueue.size() + "\n");
-                out.write("property float x\n" +
-                        "property float y\n" +
-                        "property float z\n");
-                out.write("element face " + FaceGroup.size() + "\n");
-                out.write("property list uchar int vertex_indices\n");
-                out.write("end_header\n");
-                while (!priorityQueue.isEmpty()) {
-                    int temp = priorityQueue.poll();
-                    Dot dot = dotList.get(temp);
-                    hashMap.put(temp, cnt);
-                    cnt++;
-                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + "\n");
-                }
-                for (int k : FaceGroup) {
-                    List<Integer> dot_indices = faceList.get(k).getDot_indices();
-                    out.write(dot_indices.size() + " ");
-                    for (int j : dot_indices) {
-                        out.write(hashMap.get(j) + " ");
-                    }
-                    out.write("\n");
-                }
-                out.close();
-                System.out.println("SectionGroups写入成功");
-            }catch (IOException e) {
-                e.printStackTrace();
-            }
+            out.close();
+            System.out.println("Section_PLY写入成功");
+        }catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -502,9 +498,9 @@ public class mainAlgorithm {
     }
 
     public static void main(String[] args) throws Exception {
-        String ply_path = "C:\\Users\\what1\\IdeaProjects\\kaogu-master\\src\\main\\resources\\static\\polygons\\sa1.ply";
+        String ply_path = "C:\\Users\\what1\\IdeaProjects\\kaogu-master\\src\\main\\resources\\static\\polygons\\sa2_section.ply";
         long start = new Date().getTime();
-        writeMeanPLY(ply_path);
+        DeNoisedSectionPLY(ply_path);
         long end = new Date().getTime();
         System.out.println((end-start));
     }
