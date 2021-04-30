@@ -1,5 +1,6 @@
 package com.kaogu.Algorithm;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Face {
@@ -45,5 +46,16 @@ public class Face {
 
     public Face(List<Integer> dot_indices) {
         this.dot_indices = dot_indices;
+    }
+
+    public List<Integer> sharingDot(Face face) {
+        List<Integer> dots = face.getDot_indices();
+        List<Integer> res = new ArrayList<>();
+        for (int i : dot_indices) {
+            if (dots.contains(i)) {
+                res.add(i);
+            }
+        }
+        return res;
     }
 }

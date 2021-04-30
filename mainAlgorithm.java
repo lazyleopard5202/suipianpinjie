@@ -119,12 +119,14 @@ public class mainAlgorithm {
 
     public static void writeColorPLY(String ply_path, double threshold, int group_cnt) throws IOException {
         PLYModel plyModel = readPLY(ply_path);
-        plyModel.ClassifyFaceGroup(threshold);
+        plyModel.setThreshold(threshold);
+        plyModel.setGroup_cnt(group_cnt);
+        plyModel.ClassifyFaceGroup();
         String target_path = "target.ply";
         if (group_cnt == 0) {
             target_path = ply_path.substring(0, ply_path.length()-4) + "_t" + threshold + ".ply";
         }else {
-            plyModel.UnionSmallGroup4(group_cnt);
+            plyModel.UnionSmallGroup4();
             target_path = ply_path.substring(0, ply_path.length()-4) + "_t" + threshold + "_c" + group_cnt + ".ply";
         }
         List<Dot> dotList = plyModel.getDotList();
@@ -169,11 +171,189 @@ public class mainAlgorithm {
         }
     }
 
+    public static void writeGaussianPLY(String ply_path) throws IOException {
+        PLYModel plyModel = readPLY(ply_path);
+        List<Dot> dotList = plyModel.getDotList();
+        List<Face> faceList = plyModel.getFaceList();
+        String target_path = ply_path.substring(0, ply_path.length()-4) + "_gaussian.ply";
+        try {
+            BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
+            out.write("ply\n" +
+                    "format ascii 1.0\n" +
+                    "element vertex " + dotList.size() + "\n");
+            out.write("property float x\n" +
+                    "property float y\n" +
+                    "property float z\n");
+            out.write("property uchar red\n" +
+                    "property uchar green\n" +
+                    "property uchar blue\n");
+            out.write("element face " + faceList.size() + "\n");
+            out.write("property list uchar int vertex_indices\n");
+            out.write("end_header\n");
+            Color Red = new Color(255, 0, 0);
+            Color Green = new Color(0, 255, 0);
+            Color Blue = new Color(0, 0, 255);
+            for (Dot dot : dotList) {
+                double K = dot.getK();
+                if (K > 0) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Blue.toColor() + " \n");
+                }else if (K < 0) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Red.toColor() + " \n");
+                }else {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Green.toColor() + " \n");
+                }
+            }
+            for (Face face : faceList) {
+                List<Integer> dot_indices = face.getDot_indices();
+                out.write(dot_indices.size() + " ");
+                out.write(dot_indices.get(0) + " " + dot_indices.get(1) + " " + dot_indices.get(2)+ " \n");
+            }
+            out.close();
+            System.out.println("GaussianPLY写入成功");
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void writeMeanPLY(String ply_path) throws IOException {
+        PLYModel plyModel = readPLY(ply_path);
+        List<Dot> dotList = plyModel.getDotList();
+        List<Face> faceList = plyModel.getFaceList();
+        String target_path = ply_path.substring(0, ply_path.length()-4) + "_mean.ply";
+        try {
+            BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
+            out.write("ply\n" +
+                    "format ascii 1.0\n" +
+                    "element vertex " + dotList.size() + "\n");
+            out.write("property float x\n" +
+                    "property float y\n" +
+                    "property float z\n");
+            out.write("property uchar red\n" +
+                    "property uchar green\n" +
+                    "property uchar blue\n");
+            out.write("element face " + faceList.size() + "\n");
+            out.write("property list uchar int vertex_indices\n");
+            out.write("end_header\n");
+            Color Red = new Color(255, 0, 0);
+            Color Green = new Color(0, 255, 0);
+            Color Blue = new Color(0, 0, 255);
+            for (Dot dot : dotList) {
+                double H = dot.getH();
+                if (H > 0.3) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Blue.toColor() + " \n");
+                }else if (H < 0.3) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Red.toColor() + " \n");
+                }else {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Green.toColor() + " \n");
+                }
+            }
+            for (Face face : faceList) {
+                List<Integer> dot_indices = face.getDot_indices();
+                out.write(dot_indices.size() + " ");
+                out.write(dot_indices.get(0) + " " + dot_indices.get(1) + " " + dot_indices.get(2)+ " \n");
+            }
+            out.close();
+            System.out.println("GaussianPLY写入成功");
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void writeK1PLY(String ply_path) throws IOException {
+        PLYModel plyModel = readPLY(ply_path);
+        List<Dot> dotList = plyModel.getDotList();
+        List<Face> faceList = plyModel.getFaceList();
+        String target_path = ply_path.substring(0, ply_path.length()-4) + "_k1.ply";
+        try {
+            BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
+            out.write("ply\n" +
+                    "format ascii 1.0\n" +
+                    "element vertex " + dotList.size() + "\n");
+            out.write("property float x\n" +
+                    "property float y\n" +
+                    "property float z\n");
+            out.write("property uchar red\n" +
+                    "property uchar green\n" +
+                    "property uchar blue\n");
+            out.write("element face " + faceList.size() + "\n");
+            out.write("property list uchar int vertex_indices\n");
+            out.write("end_header\n");
+            Color Red = new Color(255, 0, 0);
+            Color Green = new Color(0, 255, 0);
+            Color Blue = new Color(0, 0, 255);
+            for (Dot dot : dotList) {
+                double k1 = dot.getK1();
+                if (k1 > 0.6) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Blue.toColor() + " \n");
+                }else if (k1 < 0.6) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Red.toColor() + " \n");
+                }else {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Green.toColor() + " \n");
+                }
+            }
+            for (Face face : faceList) {
+                List<Integer> dot_indices = face.getDot_indices();
+                out.write(dot_indices.size() + " ");
+                out.write(dot_indices.get(0) + " " + dot_indices.get(1) + " " + dot_indices.get(2)+ " \n");
+            }
+            out.close();
+            System.out.println("K1PLY写入成功");
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void writeK2PLY(String ply_path) throws IOException {
+        PLYModel plyModel = readPLY(ply_path);
+        List<Dot> dotList = plyModel.getDotList();
+        List<Face> faceList = plyModel.getFaceList();
+        String target_path = ply_path.substring(0, ply_path.length()-4) + "_k2.ply";
+        try {
+            BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
+            out.write("ply\n" +
+                    "format ascii 1.0\n" +
+                    "element vertex " + dotList.size() + "\n");
+            out.write("property float x\n" +
+                    "property float y\n" +
+                    "property float z\n");
+            out.write("property uchar red\n" +
+                    "property uchar green\n" +
+                    "property uchar blue\n");
+            out.write("element face " + faceList.size() + "\n");
+            out.write("property list uchar int vertex_indices\n");
+            out.write("end_header\n");
+            Color Red = new Color(255, 0, 0);
+            Color Green = new Color(0, 255, 0);
+            Color Blue = new Color(0, 0, 255);
+            for (Dot dot : dotList) {
+                double k2 = dot.getK2();
+                if (k2 > 0) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Blue.toColor() + " \n");
+                }else if (k2 < 0) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Red.toColor() + " \n");
+                }else {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Green.toColor() + " \n");
+                }
+            }
+            for (Face face : faceList) {
+                List<Integer> dot_indices = face.getDot_indices();
+                out.write(dot_indices.size() + " ");
+                out.write(dot_indices.get(0) + " " + dot_indices.get(1) + " " + dot_indices.get(2)+ " \n");
+            }
+            out.close();
+            System.out.println("K2PLY写入成功");
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void writeData(String ply_path, double threshold, int group_cnt) throws IOException {
         PLYModel plyModel = readPLY(ply_path);
         plyModel.makeFaceGraph();
-        plyModel.ClassifyFaceGroup(threshold);
-        plyModel.UnionSmallGroup1(group_cnt);
+        plyModel.setThreshold(threshold);
+        plyModel.setGroup_cnt(group_cnt);
+        plyModel.ClassifyFaceGroup();
+        plyModel.UnionSmallGroup4();
         List<Dot> dotList = plyModel.getDotList();
         List<Face> faceList = plyModel.getFaceList();
         List<List<Integer>> FaceGroupList = plyModel.getFaceGroupList();
@@ -211,8 +391,11 @@ public class mainAlgorithm {
 
     public static void writeSectionPLY(String ply_path, double threshold, int group_cnt) throws IOException {
         PLYModel plyModel = readPLY(ply_path);
-        plyModel.ClassifyFaceGroup(threshold);
-        plyModel.UnionSmallGroup4(group_cnt);
+        plyModel.setThreshold(threshold);
+        plyModel.setGroup_cnt(group_cnt);
+        plyModel.ClassifyFaceGroup();
+        plyModel.UnionSmallGroup4();
+        plyModel.removeNoise();
         List<Dot> dotList = plyModel.getDotList();
         List<Face> faceList = plyModel.getFaceList();
         List<List<Integer>> FaceGroupList = plyModel.getFaceGroupList();
@@ -327,37 +510,58 @@ public class mainAlgorithm {
         }
     }
 
-    public static void writeBorderPLY(String ply_path) throws Exception {
-        PLYModel section_ply = readPLY(ply_path);
-        DoubleLinkedList[] doubleLinkedLists = section_ply.getBorderLine();
+    public static void writeBorderPLY(String ply_path, double threshold, int group_cnt) throws Exception {
+        PLYModel plyModel = readPLY(ply_path);
+        plyModel.setThreshold(threshold);
+        plyModel.setGroup_cnt(group_cnt);
+        plyModel.ClassifyFaceGroup();
+        plyModel.UnionSmallGroup4();
+        plyModel.removeNoise();
+        List<Dot> dotList = plyModel.getDotList();
+        HashMap<Dot, Integer> DotMap = plyModel.getDotMap();
+        List<DoubleLinkedList> borders = plyModel.getSectionBorderLine();
         String target_path = ply_path.substring(0, ply_path.length()-4) + "_border.ply";
+        PriorityQueue<Integer> priorityQueue = new PriorityQueue<>();
+        HashMap<Integer, Integer> hashMap = new HashMap<>();
+        for (int i = 0; i < borders.size(); i++) {
+            DoubleLinkedList doubleLinkedList = borders.get(i);
+            DoubleLinkedNode first = doubleLinkedList.getHead().getNext();
+            DoubleLinkedNode temp = first;
+            while (temp.getNext() != first) {
+                priorityQueue.add(DotMap.get(temp.getDot()));
+                temp = temp.getNext();
+            }
+        }
         try {
             BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
             out.write("ply\n" +
                     "format ascii 1.0\n" +
-                    "element vertex " + (doubleLinkedLists[0].size()+doubleLinkedLists[1].size()) + "\n");
+                    "element vertex " + priorityQueue.size() + "\n");
             out.write("property float x\n" +
                     "property float y\n" +
                     "property float z\n");
-            out.write("element edge " + (doubleLinkedLists[0].size()+doubleLinkedLists[1].size()) + "\n");
+            out.write("element edge " + priorityQueue.size() + "\n");
             out.write("property int vertex1\n" +
                     "property int vertex2\n");
             out.write("end_header\n");
-            for (DoubleLinkedList doubleLinkedList : doubleLinkedLists) {
-                for (int i = 0; i < doubleLinkedList.size(); i++) {
-                    Dot dot = doubleLinkedList.getNode(i).getDot();
-                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + "\n");
+            int cnt = 0;
+            while (!priorityQueue.isEmpty()) {
+                int temp = priorityQueue.poll();
+                hashMap.put(temp, cnt);
+                cnt++;
+                Dot dot = dotList.get(temp);
+                out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " \n");
+            }
+            for (int i = 0; i < borders.size(); i++) {
+                DoubleLinkedList doubleLinkedList = borders.get(i);
+                DoubleLinkedNode start = doubleLinkedList.getHead().getNext();
+                DoubleLinkedNode temp = start;
+                while (temp.getNext() != start) {
+
+                    out.write(hashMap.get(DotMap.get(temp.getDot())) + " " + hashMap.get(DotMap.get(temp.getNext().getDot())) + "\n");
+                    temp = temp.getNext();
                 }
             }
-            DoubleLinkedList doubleLinkedList1 = doubleLinkedLists[0];
-            DoubleLinkedList doubleLinkedList2 = doubleLinkedLists[1];
-            for (int i = 0; i < doubleLinkedList1.size(); i++) {
-                out.write(i + " " + ((i+1) % doubleLinkedList1.size()) + "\n");
-            }
-            for (int i = 0; i < doubleLinkedList2.size()-1; i++) {
-                out.write((i+doubleLinkedList1.size()) + " " + (i+doubleLinkedList1.size()+1) + "\n");
-            }
-            out.write((doubleLinkedList1.size()+ doubleLinkedList2.size()-1) + " " + doubleLinkedList1.size() + "\n");
             out.close();
             System.out.println("Section_Border写入成功");
         }catch (IOException e) {
@@ -365,11 +569,23 @@ public class mainAlgorithm {
         }
     }
 
-    public static void writeGaussianPLY(String ply_path) throws IOException {
+    public static void writeBorderedPLY(String ply_path, double threshold, int group_cnt) throws Exception {
         PLYModel plyModel = readPLY(ply_path);
+        plyModel.setThreshold(threshold);
+        plyModel.setGroup_cnt(group_cnt);
+        plyModel.ClassifyFaceGroup();
+        plyModel.UnionSmallGroup4();
+        plyModel.removeNoise();
         List<Dot> dotList = plyModel.getDotList();
         List<Face> faceList = plyModel.getFaceList();
-        String target_path = ply_path.substring(0, ply_path.length()-4) + "_gaussian.ply";
+        HashMap<Dot, Integer> DotMap = plyModel.getDotMap();
+        List<DoubleLinkedList> borders = plyModel.getSectionBorderLine();
+        int border_length = 0;
+        for (int i = 0; i < borders.size(); i++) {
+            border_length += borders.get(i).size();
+        }
+        System.out.println(border_length);
+        String target_path =ply_path.substring(0, ply_path.length()-4) + "_partial_bordered.ply";
         try {
             BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
             out.write("ply\n" +
@@ -378,88 +594,159 @@ public class mainAlgorithm {
             out.write("property float x\n" +
                     "property float y\n" +
                     "property float z\n");
+            out.write("element face " + faceList.size() + "\n");
+            out.write("property list uchar int vertex_indices\n");
+            out.write("element edge " + border_length + "\n");
+            out.write("property int vertex1\n" +
+                    "property int vertex2\n");
             out.write("property uchar red\n" +
                     "property uchar green\n" +
                     "property uchar blue\n");
-            out.write("element face " + faceList.size() + "\n");
-            out.write("property list uchar int vertex_indices\n");
             out.write("end_header\n");
-            Color Red = new Color(255, 0, 0);
-            Color Green = new Color(0, 255, 0);
-            Color Blue = new Color(0, 0, 255);
             for (Dot dot : dotList) {
-                double K = dot.getK();
-                if (K > 0) {
-                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Blue.toColor() + " \n");
-                }else if (K < 0) {
-                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Red.toColor() + " \n");
-                }else {
-                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Green.toColor() + " \n");
-                }
+                out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " \n");
             }
             for (Face face : faceList) {
                 List<Integer> dot_indices = face.getDot_indices();
                 out.write(dot_indices.size() + " ");
-                out.write(dot_indices.get(0) + " " + dot_indices.get(1) + " " + dot_indices.get(2)+ " \n");
+                for (int i = 0; i < dot_indices.size(); i++) {
+                    out.write(dot_indices.get(i) + " ");
+                }
+                out.write("\n");
+            }
+            Color Red = new Color(255, 0, 0);
+            for (DoubleLinkedList doubleLinkedList : borders) {
+                DoubleLinkedNode temp = doubleLinkedList.getHead();
+                for (int i = 0; i < doubleLinkedList.size(); i++) {
+                    temp = temp.getNext();
+                    out.write(DotMap.get(temp.getDot()) + " " + DotMap.get(temp.getNext().getDot()) + " " + Red.toColor() + "\n");
+                }
             }
             out.close();
-            System.out.println("GaussianPLY写入成功");
+            System.out.println("BorderedPLY写入成功");
         }catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static void writeMeanPLY(String ply_path) throws IOException {
-        PLYModel plyModel = readPLY(ply_path);
-        List<Dot> dotList = plyModel.getDotList();
-        List<Face> faceList = plyModel.getFaceList();
-        String target_path = ply_path.substring(0, ply_path.length()-4) + "_mean.ply";
-        try {
-            BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
-            out.write("ply\n" +
-                    "format ascii 1.0\n" +
-                    "element vertex " + dotList.size() + "\n");
-            out.write("property float x\n" +
-                    "property float y\n" +
-                    "property float z\n");
-            out.write("property uchar red\n" +
-                    "property uchar green\n" +
-                    "property uchar blue\n");
-            out.write("element face " + faceList.size() + "\n");
-            out.write("property list uchar int vertex_indices\n");
-            out.write("end_header\n");
-            Color Red = new Color(255, 0, 0);
-            Color Green = new Color(0, 255, 0);
-            Color Blue = new Color(0, 0, 255);
-            for (Dot dot : dotList) {
-                double H = dot.getH();
-                if (H > 0.3) {
-                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Blue.toColor() + " \n");
-                }else if (H < 0.3) {
-                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Red.toColor() + " \n");
-                }else {
-                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Green.toColor() + " \n");
-                }
+    public static void MatchPLY(String ply_path1, String ply_path2) throws Exception {
+        PLYModel plyModel1 = readPLY(ply_path1);
+        PLYModel plyModel2 = readPLY(ply_path2);
+        plyModel1.setThreshold(5);
+        plyModel2.setThreshold(3);
+        plyModel1.setGroup_cnt(4);
+        plyModel2.setGroup_cnt(5);
+        plyModel1.ClassifyFaceGroup();
+        plyModel2.ClassifyFaceGroup();
+        plyModel1.UnionSmallGroup4();
+        plyModel2.UnionSmallGroup4();
+        plyModel1.removeNoise();
+        plyModel2.removeNoise();
+        List<DoubleLinkedList> list1 = plyModel1.getSectionBorderLine();
+        List<DoubleLinkedList> list2 = plyModel2.getSectionBorderLine();
+        DoubleLinkedList doubleLinkedList1 = list1.get(0);
+        DoubleLinkedList doubleLinkedList2 = list1.get(1);
+        DoubleLinkedList doubleLinkedList3 = doubleLinkedList1.reverse();
+        DoubleLinkedList doubleLinkedList4 = doubleLinkedList2.reverse();
+        DoubleLinkedList doubleLinkedList5 = list2.get(0);
+        DoubleLinkedList doubleLinkedList6 = list2.get(1);
+        DoubleLinkedList doubleLinkedList7 = doubleLinkedList5.reverse();
+        DoubleLinkedList doubleLinkedList8 = doubleLinkedList6.reverse();
+        int[][] ret = new int[16][];
+        ret[0] = doubleLinkedList1.LCS(doubleLinkedList5);
+        ret[1] = doubleLinkedList2.LCS(doubleLinkedList6);
+        ret[2] = doubleLinkedList1.LCS(doubleLinkedList6);
+        ret[3] = doubleLinkedList2.LCS(doubleLinkedList5);
+        ret[4] = doubleLinkedList1.LCS(doubleLinkedList7);
+        ret[5] = doubleLinkedList2.LCS(doubleLinkedList8);
+        ret[6] = doubleLinkedList1.LCS(doubleLinkedList8);
+        ret[7] = doubleLinkedList2.LCS(doubleLinkedList7);
+        ret[8] = doubleLinkedList3.LCS(doubleLinkedList5);
+        ret[9] = doubleLinkedList4.LCS(doubleLinkedList6);
+        ret[10] = doubleLinkedList3.LCS(doubleLinkedList6);
+        ret[11] = doubleLinkedList4.LCS(doubleLinkedList5);
+        ret[12] = doubleLinkedList3.LCS(doubleLinkedList7);
+        ret[13] = doubleLinkedList4.LCS(doubleLinkedList8);
+        ret[14] = doubleLinkedList3.LCS(doubleLinkedList8);
+        ret[15] = doubleLinkedList4.LCS(doubleLinkedList7);
+        for (int i = 0; i < 16; i++) {
+            System.out.println("ret" + i + ": x=" + ret[i][0] + ", y=" + ret[i][1] + ", max=" + ret[i][2]);
+        }
+        for (int i = 0; i < 8; i++) {
+            String target_path1 = ply_path1.substring(0, ply_path1.length()-4) + "_match" + i + ".ply";
+            String target_path2 = ply_path2.substring(0, ply_path2.length()-4) + "_match" + i + ".ply";
+            Color[][] colors = new Color[2][];
+            colors[0] = new Color[ret[2*i][2]];
+            colors[1] = new Color[ret[2*i+1][2]];
+            for (int j = 0; j < colors[0].length; j++) {
+                colors[0][j] = new Color((int)(255*Math.random()), (int)(255*Math.random()), (int)(255*Math.random()));
             }
-            for (Face face : faceList) {
-                List<Integer> dot_indices = face.getDot_indices();
-                out.write(dot_indices.size() + " ");
-                out.write(dot_indices.get(0) + " " + dot_indices.get(1) + " " + dot_indices.get(2)+ " \n");
+            for (int j = 0; j < colors[1].length; j++) {
+                colors[1][j] = new Color((int)(255*Math.random()), (int)(255*Math.random()), (int)(255*Math.random()));
             }
-            out.close();
-            System.out.println("GaussianPLY写入成功");
-        }catch (IOException e) {
-            e.printStackTrace();
+            DoubleLinkedList[] linkedLists = new DoubleLinkedList[2];
+            int[][] match = new int[2][];
+            match[0] = ret[2*i];
+            match[1] = ret[2*i+1];
+            if (i < 4) {
+                linkedLists[0] = doubleLinkedList1;
+                linkedLists[1] = doubleLinkedList2;
+            }else {
+                linkedLists[0] = doubleLinkedList3;
+                linkedLists[1] = doubleLinkedList4;
+            }
+            writeMatchPLY(target_path1, plyModel1, linkedLists, match, colors, true);
+            if (i % 4 == 0) {
+                linkedLists[0] = doubleLinkedList5;
+                linkedLists[1] = doubleLinkedList6;
+            }else if (i % 4 == 1) {
+                linkedLists[0] = doubleLinkedList6;
+                linkedLists[1] = doubleLinkedList5;
+            }else if (i % 4 == 2) {
+                linkedLists[0] = doubleLinkedList7;
+                linkedLists[1] = doubleLinkedList8;
+            }else {
+                linkedLists[0] = doubleLinkedList8;
+                linkedLists[1] = doubleLinkedList7;
+            }
+            writeMatchPLY(target_path2, plyModel2, linkedLists, match, colors, false);
         }
     }
 
-    public static void writeK2PLY(String ply_path) throws IOException {
-        PLYModel plyModel = readPLY(ply_path);
+    public static void writeMatchPLY(String ply_path, PLYModel plyModel, DoubleLinkedList[] doubleLinkedLists, int[][] match, Color[][] colors, Boolean first) {
+        DoubleLinkedList doubleLinkedList1 = doubleLinkedLists[0];
+        DoubleLinkedList doubleLinkedList2 = doubleLinkedLists[1];
         List<Dot> dotList = plyModel.getDotList();
         List<Face> faceList = plyModel.getFaceList();
-        String target_path = ply_path.substring(0, ply_path.length()-4) + "_k2.ply";
+        HashMap<Dot, Integer> DotMap = plyModel.getDotMap();
+        HashSet<Integer> hashSet = new HashSet<>();
+        DoubleLinkedNode temp1 = doubleLinkedList1.getHead().getNext();
+        DoubleLinkedNode temp2 = doubleLinkedList2.getHead().getNext();
+        if (first) {
+            for (int i = 0; i < match[0][0]; i++) {
+                temp1 = temp1.getNext();
+            }
+            for (int i = 0; i < match[1][0]; i++) {
+                temp2 = temp2.getNext();
+            }
+        }else {
+            for (int i = 0; i < match[0][1]; i++) {
+                temp1 = temp1.getNext();
+            }
+            for (int i = 0; i < match[1][1]; i++) {
+                temp2 = temp2.getNext();
+            }
+        }
+        for (int i = 0; i < match[0][2]; i++) {
+            hashSet.add(DotMap.get(temp1.getDot()));
+            temp1 = temp1.getNext();
+        }
+        for (int i = 0; i < match[1][2]; i++) {
+            hashSet.add(DotMap.get(temp2.getDot()));
+            temp2 = temp2.getNext();
+        }
         try {
-            BufferedWriter out = new BufferedWriter(new FileWriter(target_path));
+            BufferedWriter out = new BufferedWriter(new FileWriter(ply_path));
             out.write("ply\n" +
                     "format ascii 1.0\n" +
                     "element vertex " + dotList.size() + "\n");
@@ -472,35 +759,57 @@ public class mainAlgorithm {
             out.write("element face " + faceList.size() + "\n");
             out.write("property list uchar int vertex_indices\n");
             out.write("end_header\n");
-            Color Red = new Color(255, 0, 0);
-            Color Green = new Color(0, 255, 0);
-            Color Blue = new Color(0, 0, 255);
-            for (Dot dot : dotList) {
-                double k2 = dot.getK2();
-                if (k2 > 0) {
-                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Blue.toColor() + " \n");
-                }else if (k2 < 0) {
-                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Red.toColor() + " \n");
+            Color white = new Color(0,0,0);
+            for (int i = 0; i < dotList.size(); i++) {
+                Dot dot = dotList.get(i);
+                if (!hashSet.contains(i)) {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + white.toColor() + "\n");
                 }else {
-                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + Green.toColor() + " \n");
+                    int index1 = doubleLinkedList1.getIndex(dot);
+                    int index2 = doubleLinkedList2.getIndex(dot);
+                    int c = 0;
+                    if (index1 != -1) {
+                        if (first) {
+                            c = (index1 - match[0][0] + doubleLinkedList1.size()) % doubleLinkedList1.size();
+                        }else {
+                            c = (index1 - match[0][1] + doubleLinkedList1.size()) % doubleLinkedList1.size();
+                        }
+                        out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + colors[0][c].toColor() + "\n");
+                    }else if (index2 != -1) {
+                        if (first) {
+                            c = (index2 - match[1][0] + doubleLinkedList2.size()) % doubleLinkedList2.size();
+                        }else {
+                            c = (index2 - match[1][1] + doubleLinkedList2.size()) % doubleLinkedList2.size();
+                        }
+                        out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + colors[1][c].toColor() + "\n");
+                    }else {
+                        System.out.println("something wrong");
+                    }
                 }
             }
             for (Face face : faceList) {
                 List<Integer> dot_indices = face.getDot_indices();
                 out.write(dot_indices.size() + " ");
-                out.write(dot_indices.get(0) + " " + dot_indices.get(1) + " " + dot_indices.get(2)+ " \n");
+                for (int i = 0; i < dot_indices.size(); i++) {
+                    out.write(dot_indices.get(i) + " ");
+                }
+                out.write("\n");
             }
             out.close();
-            System.out.println("GaussianPLY写入成功");
+            System.out.println("MatchPLY写入成功");
         }catch (IOException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public static void main(String[] args) throws Exception {
-        String ply_path = "C:\\Users\\what1\\IdeaProjects\\kaogu-master\\src\\main\\resources\\static\\polygons\\sa2_section.ply";
+        String ply_path = "C:\\Users\\what1\\IdeaProjects\\kaogu-master\\src\\main\\resources\\static\\polygons\\sa1.ply";
+        String ply_path1 = ply_path;
+        String ply_path2 = "C:\\Users\\what1\\IdeaProjects\\kaogu-master\\src\\main\\resources\\static\\polygons\\sa2.ply";
         long start = new Date().getTime();
-        DeNoisedSectionPLY(ply_path);
+        MatchPLY(ply_path1, ply_path2);
         long end = new Date().getTime();
         System.out.println((end-start));
     }

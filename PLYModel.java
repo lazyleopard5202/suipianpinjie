@@ -9,6 +9,33 @@ public class PLYModel {
     private List<List<Integer>> FaceGroupList; //记录FaceGroup，每一组FaceGroup中记录的是face的序号
     private int[][] face_graph;  //记录小三角形和哪三个小三角形相邻，graph = new int[dotlist,size][3],记录的是三个小三角形的序号
     private Set<Integer>[] dot_face_graph;
+    private HashMap<Dot, Integer> dotMap;
+    private double threshold = 5;
+    private int group_cnt = 4;
+
+    public double getThreshold() {
+        return threshold;
+    }
+
+    public void setThreshold(double threshold) {
+        this.threshold = threshold;
+    }
+
+    public int getGroup_cnt() {
+        return group_cnt;
+    }
+
+    public void setGroup_cnt(int group_cnt) {
+        this.group_cnt = group_cnt;
+    }
+
+    public HashMap<Dot, Integer> getDotMap() {
+        return dotMap;
+    }
+
+    public void setDotMap(HashMap<Dot, Integer> dotMap) {
+        this.dotMap = dotMap;
+    }
 
     public int[][] getFace_graph() {
         return makeFaceGraph();
@@ -32,6 +59,12 @@ public class PLYModel {
 
     public void setFaceList(List<Face> faceList) {
         this.faceList = faceList;
+    }
+
+    public void makeDotMap() {
+        for (int i = 0; i < dotList.size(); i++) {
+            dotMap.put(dotList.get(i), i);
+        }
     }
 
     public void calNVectors() {
@@ -360,6 +393,7 @@ public class PLYModel {
     }
 
     public void init() {
+        makeDotMap();
         makeFaceGraph();
         makeDotFaceGraph();
         calAngles();
@@ -396,46 +430,62 @@ public class PLYModel {
     }
 
     public void removeNoise() {
-        Boolean[] visited = new Boolean[faceList.size()];
-        Arrays.fill(visited, false);
-        int start = 0;
-        while (start < faceList.size()) {
-            if (visited[start]) {
+        if (FaceGroupList.size() == 0) {
+            ClassifyFaceGroup();
+            UnionSmallGroup4();
+        }
+        List<Integer> FaceGroup = FaceGroupList.get(FaceGroupList.size()-1);
+        HashSet<Integer> Group = new HashSet<>();
+        for (int i = 0; i < FaceGroup.size(); i++) {
+            Group.add(FaceGroup.get(i));
+        }
+        HashSet<Integer> visited = new HashSet<>();
+        int index = 0;
+        while (index < FaceGroup.size()) {
+            int root = FaceGroup.get(index);
+            if (visited.contains(root)) {
+                index++;
                 continue;
             }
-            int root = start;
             ArrayList<Integer> list = new ArrayList<>();
             Queue<Integer> queue = new LinkedList<>();
             queue.add(root);
-            visited[root] = true;
+            visited.add(root);
             list.add(root);
             while (!queue.isEmpty()) {
                 int temp = queue.poll();
-                for (int i = 0; i < face_graph[temp].length; i++) {
-                    if (face_graph[temp][i] == -1) {
+                for (int i = 0; i < 3; i++) {
+                    int neighbor = face_graph[temp][i];
+                    if (neighbor == -1) {
                         continue;
                     }
-                    if (!visited[face_graph[temp][i]]) {
-                        queue.add(face_graph[temp][i]);
-                        list.add(face_graph[temp][i]);
-                        visited[face_graph[temp][i]] = true;
+                    if (!Group.contains(neighbor)) {
+                        continue;
+                    }
+                    if (!visited.contains(neighbor)) {
+                        queue.add(neighbor);
+                        list.add(neighbor);
+                        visited.add(neighbor);
                     }
                 }
             }
-            if (list.size() > 0.5 * faceList.size()) {
-                ArrayList<Face> newFaceList = new ArrayList<>();
+            if (list.size() > 0.5 * FaceGroup.size()) {
+                ArrayList<Integer> rest = new ArrayList<>();
                 for (int i = 0; i < list.size(); i++) {
-                    newFaceList.add(faceList.get(list.get(i)));
+                    if (!FaceGroup.contains(list.get(i))) {
+                        rest.add(list.get(i));
+                    }
                 }
-                faceList = newFaceList;
-                init();
+                FaceGroupList.remove(FaceGroup);
+                FaceGroupList.add(rest);
+                FaceGroupList.add(list);
                 break;
             }
         }
     }
 
     //根据法向量夹角阈值分组，threshold为夹角阈值，核心想法是bfs
-    public List<List<Integer>> ClassifyFaceGroup(double threshold) {
+    public List<List<Integer>> ClassifyFaceGroup() {
         this.makeFaceGraph();
         Boolean[] visited = new Boolean[faceList.size()];
         Arrays.fill(visited, false);
@@ -474,7 +524,7 @@ public class PLYModel {
     }
 
     //将小的组合并到大的组，group_cnt是最后要分几组，核心想法是dijkstra
-    public List<List<Integer>> UnionSmallGroup(int group_cnt) {
+    public List<List<Integer>> UnionSmallGroup() {
         FaceGroupList.sort(new Comparator<List<Integer>>() {
             @Override
             public int compare(List<Integer> o1, List<Integer> o2) {
@@ -787,7 +837,7 @@ public class PLYModel {
         return FaceGroupList;
     }
 
-    public List<List<Integer>> UnionSmallGroup4(int group_cnt) {
+    public List<List<Integer>> UnionSmallGroup4() {
         FaceGroupList.sort(new Comparator<List<Integer>>() {
             @Override
             public int compare(List<Integer> o1, List<Integer> o2) {
@@ -1002,10 +1052,138 @@ public class PLYModel {
         return doubleLinkedLists;
     }
 
+    public List<DoubleLinkedList> getSectionBorderLine() throws Exception {
+        List<DoubleLinkedList> ret = new ArrayList<>();
+        List<Integer> FaceGroup = FaceGroupList.get(FaceGroupList.size()-1);
+        HashSet<Integer>[] dot_graph = new HashSet[dotList.size()];
+        for (int i = 0; i < dot_graph.length; i++) {
+            dot_graph[i] = new HashSet<>();
+        }
+        HashSet<Integer> Group = new HashSet<>();
+        HashSet<Integer> visited = new HashSet<>();
+        for (int i = 0; i < FaceGroup.size(); i++) {
+            Group.add(FaceGroup.get(i));
+        }
+        int index = 0;
+        while (index < FaceGroup.size()) {
+            int root = FaceGroup.get(index);
+            if (visited.contains(root)) {
+                index++;
+                continue;
+            }
+            Queue<Integer> queue = new LinkedList<>();
+            queue.add(root);
+            visited.add(root);
+            while (!queue.isEmpty()) {
+                int temp = queue.poll();
+                for (int i = 0; i < face_graph[temp].length; i++) {
+                    int neighbor = face_graph[temp][i];
+                    if (visited.contains(neighbor)) {
+                        continue;
+                    }
+                    if (Group.contains(neighbor)) {
+                        queue.add(neighbor);
+                        visited.add(neighbor);
+                    }else {
+                        Face faceA = faceList.get(temp);
+                        Face faceB = faceList.get(neighbor);
+                        List<Integer> sharing = faceA.sharingDot(faceB);
+                        int a = sharing.get(0);
+                        int b = sharing.get(1);
+                        dot_graph[a].add(b);
+                        dot_graph[b].add(a);
+                    }
+                }
+            }
+            HashSet<Integer> BorderDots = new HashSet<>();
+            for (int i = 0; i < dot_graph.length; i++) {
+                if (dot_graph[i].size() != 0 & dot_graph[i].size() != 2) {
+                    System.out.println("dot_graph[" + i + "].size=" + dot_graph[i].size());
+                }else {
+                    if (dot_graph[i].size() == 2) {
+                        BorderDots.add(i);
+                    }
+                }
+            }
+            Iterator<Integer> iterator = BorderDots.iterator();
+            HashSet<Integer> visited_dots = new HashSet<>();
+            queue.clear();
+            while (iterator.hasNext()) {
+                int dot_index = iterator.next();
+                if (visited_dots.contains(dot_index)) {
+                    continue;
+                }else {
+                    DoubleLinkedList doubleLinkedList = new DoubleLinkedList();
+                    doubleLinkedList.push_back(dotList.get(dot_index));
+                    queue.add(dot_index);
+                    visited_dots.add(dot_index);
+                    while (!queue.isEmpty()) {
+                        int temp = queue.poll();
+                        Iterator iterator1 = dot_graph[temp].iterator();
+                        int a = (int) iterator1.next();
+                        int b = (int) iterator1.next();
+                        if (!visited_dots.contains(a)) {
+                            doubleLinkedList.push_back(dotList.get(a));
+                            queue.add(a);
+                            visited_dots.add(a);
+                        }else if (!visited_dots.contains(b)) {
+                            doubleLinkedList.push_back(dotList.get(b));
+                            queue.add(b);
+                            visited_dots.add(b);
+                        }
+                    }
+                    ret.add(doubleLinkedList);
+                }
+            }
+        }
+        ret.sort(new Comparator<DoubleLinkedList>() {
+            @Override
+            public int compare(DoubleLinkedList o1, DoubleLinkedList o2) {
+                return o2.size() - o1.size();
+            }
+        });
+        return ret.subList(0,2);
+    }
+
+    public int[][] match(PLYModel plyModel2) throws Exception {
+        List<DoubleLinkedList> list1 = this.getSectionBorderLine();
+        List<DoubleLinkedList> list2 = plyModel2.getSectionBorderLine();
+        DoubleLinkedList doubleLinkedList1 = list1.get(0);
+        DoubleLinkedList doubleLinkedList2 = list2.get(1);
+        DoubleLinkedList doubleLinkedList3 = doubleLinkedList1.reverse();
+        DoubleLinkedList doubleLinkedList4 = doubleLinkedList2.reverse();
+        DoubleLinkedList doubleLinkedList5 = list2.get(0);
+        DoubleLinkedList doubleLinkedList6 = list2.get(1);
+        DoubleLinkedList doubleLinkedList7 = doubleLinkedList5.reverse();
+        DoubleLinkedList doubleLinkedList8 = doubleLinkedList6.reverse();
+        int[][] ret = new int[16][];
+        ret[0] = doubleLinkedList1.LCS(doubleLinkedList5);
+        ret[1] = doubleLinkedList2.LCS(doubleLinkedList6);
+        ret[2] = doubleLinkedList1.LCS(doubleLinkedList6);
+        ret[3] = doubleLinkedList2.LCS(doubleLinkedList5);
+        ret[4] = doubleLinkedList1.LCS(doubleLinkedList7);
+        ret[5] = doubleLinkedList2.LCS(doubleLinkedList8);
+        ret[6] = doubleLinkedList1.LCS(doubleLinkedList8);
+        ret[7] = doubleLinkedList2.LCS(doubleLinkedList7);
+        ret[8] = doubleLinkedList3.LCS(doubleLinkedList5);
+        ret[9] = doubleLinkedList4.LCS(doubleLinkedList6);
+        ret[10] = doubleLinkedList3.LCS(doubleLinkedList6);
+        ret[11] = doubleLinkedList4.LCS(doubleLinkedList5);
+        ret[12] = doubleLinkedList3.LCS(doubleLinkedList7);
+        ret[13] = doubleLinkedList4.LCS(doubleLinkedList8);
+        ret[14] = doubleLinkedList3.LCS(doubleLinkedList8);
+        ret[15] = doubleLinkedList4.LCS(doubleLinkedList7);
+        for (int i = 0; i < 16; i++) {
+            System.out.println("ret" + i + ": x=" + ret[i][0] + ", y=" + ret[i][1] + ", max=" + ret[i][2]);
+        }
+        return ret;
+    }
+
     public PLYModel() {
         this.dotList = new ArrayList<>();
         this.faceList = new ArrayList<>();
         this.face_graph = new int[dotList.size()][dotList.size()];
         this.FaceGroupList = new ArrayList<>();
+        this.dotMap = new HashMap<>();
     }
 }
