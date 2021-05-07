@@ -9,6 +9,10 @@ public class DoubleLinkedList {
         return head;
     }
 
+    public void setSize(int size) {
+        this.size = size;
+    }
+
     public DoubleLinkedList() {
         head = new DoubleLinkedNode();
         size = 0;
@@ -140,8 +144,11 @@ public class DoubleLinkedList {
                 double rightLength2 = right2.getRank();
                 double angle2 = left2.DotProduct(right2) / leftLength2 / rightLength2;
                 angle2 = Math.acos(angle2);
-                double res = node1.getDot().getK2() - node2.getDot().getK2();
-                if (Math.abs(res) < 0.05) {
+                double k1 = node1.getDot().getK();
+                double k2 = node2.getDot().getK();
+                double min = (Math.abs(k1) < Math.abs(k2)) ? Math.abs(k1) : Math.abs(k2);
+                double res = k1 - k2;
+                if (Math.abs(res) < 0.5 * min) {
                     if (i == 0 || j == 0) {
                         record[i][j] = 1;
                     }else {

@@ -394,7 +394,7 @@ public class mainAlgorithm {
         plyModel.setThreshold(threshold);
         plyModel.setGroup_cnt(group_cnt);
         plyModel.ClassifyFaceGroup();
-        plyModel.UnionSmallGroup4();
+        plyModel.UnionSmallGroup2(group_cnt);
         plyModel.removeNoise();
         List<Dot> dotList = plyModel.getDotList();
         List<Face> faceList = plyModel.getFaceList();
@@ -805,11 +805,16 @@ public class mainAlgorithm {
     }
 
     public static void main(String[] args) throws Exception {
-        String ply_path = "C:\\Users\\what1\\IdeaProjects\\kaogu-master\\src\\main\\resources\\static\\polygons\\sa1.ply";
+        String ply_path = "C:\\Users\\what1\\IdeaProjects\\kaogu-master\\src\\main\\resources\\static\\polygons\\pyramid.ply";
         String ply_path1 = ply_path;
         String ply_path2 = "C:\\Users\\what1\\IdeaProjects\\kaogu-master\\src\\main\\resources\\static\\polygons\\sa2.ply";
         long start = new Date().getTime();
-        MatchPLY(ply_path1, ply_path2);
+        PLYModel plyModel = readPLY(ply_path);
+        plyModel.init();
+        List<Dot> dotList = plyModel.getDotList();
+        for (Dot dot : dotList) {
+            System.out.println("Mean = " + dot.getH() + ", Gaussian = " + dot.getK());
+        }
         long end = new Date().getTime();
         System.out.println((end-start));
     }

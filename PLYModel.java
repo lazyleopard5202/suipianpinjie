@@ -220,7 +220,7 @@ public class PLYModel {
                 }else if (index == 1) {
                     NVector vectorBA = new NVector(dotA.getX()-dotB.getX(), dotA.getY()- dotB.getY(), dotA.getZ()-dotB.getZ());
                     NVector vectorBC = new NVector(dotC.getX()-dotB.getX(), dotC.getY()- dotB.getY(), dotC.getZ()-dotB.getZ());
-                    temp = (Math.pow(vectorBA.getRank(), 2) / Math.tan(angleC) + Math.pow(vectorBC.getRank(), 2) / Math.tan(angleC)) / 8;
+                    temp = (Math.pow(vectorBA.getRank(), 2) / Math.tan(angleC) + Math.pow(vectorBC.getRank(), 2) / Math.tan(angleA)) / 8;
                 }else if (index == 2) {
                     NVector vectorCA = new NVector(dotA.getX()-dotC.getX(), dotA.getY()- dotC.getY(), dotA.getZ()-dotC.getZ());
                     NVector vectorCB = new NVector(dotC.getX()-dotB.getX(), dotC.getY()- dotB.getY(), dotC.getZ()-dotB.getZ());
@@ -716,17 +716,15 @@ public class PLYModel {
             int index = -1;
             double min = 10000000;
             for (int j = 0; j < group_cnt; j++) {
-                System.out.print(distance[i][j] + " ");
                 if (distance[i][j] < min) {
                     min = distance[i][j];
                     index = j;
                 }
             }
-            System.out.println();
-            if (min < 3) {
+            if (index == group_cnt-1) {
                 FaceGroupList.get(index).add(i);
             }else {
-                if (distance[i][group_cnt-1] > 10000) {
+                if (min < 3) {
                     FaceGroupList.get(index).add(i);
                 }else {
                     FaceGroupList.get(group_cnt-1).add(i);
@@ -1142,6 +1140,25 @@ public class PLYModel {
                 return o2.size() - o1.size();
             }
         });
+        for (int i = 0; i < ret.size(); i++) {
+            DoubleLinkedList doubleLinkedList = ret.get(i);
+            DoubleLinkedNode temp = doubleLinkedList.getHead();
+            do {
+                temp = temp.getNext();
+            }while (Math.abs(temp.getDot().getK()) < 0.01);
+            DoubleLinkedNode start = temp;
+            doubleLinkedList.getHead().setNext(start);
+            temp = temp.getNext();
+            while (temp.getDot() != start.getDot()) {
+                if (Math.abs(temp.getDot().getK()) < 0.01) {
+                    temp.getNext().setPrev(temp.getPrev());
+                    temp.getPrev().setNext(temp.getNext());
+                    doubleLinkedList.setSize(doubleLinkedList.size()-1);
+                }
+                temp = temp.getNext();
+            }
+            System.out.println(doubleLinkedList.size());
+        }
         return ret.subList(0,2);
     }
 
