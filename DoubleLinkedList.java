@@ -1,5 +1,11 @@
 package com.kaogu.Algorithm;
 
+import org.apache.tomcat.jni.Proc;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+
 public class DoubleLinkedList {
 
     private DoubleLinkedNode head;
@@ -144,11 +150,11 @@ public class DoubleLinkedList {
                 double rightLength2 = right2.getRank();
                 double angle2 = left2.DotProduct(right2) / leftLength2 / rightLength2;
                 angle2 = Math.acos(angle2);
-                double k1 = node1.getDot().getK();
-                double k2 = node2.getDot().getK();
-                double min = (Math.abs(k1) < Math.abs(k2)) ? Math.abs(k1) : Math.abs(k2);
-                double res = k1 - k2;
-                if (Math.abs(res) < 0.5 * min) {
+                double k21 = node1.getDot().getK2();
+                double k22 = node2.getDot().getK2();
+                double min = (Math.abs(k21) < Math.abs(k22)) ? Math.abs(k22) : Math.abs(k21);
+                double res = k21 + k22;
+                if (Math.abs(res) < 0.05 * min) {
                     if (i == 0 || j == 0) {
                         record[i][j] = 1;
                     }else {
@@ -169,7 +175,164 @@ public class DoubleLinkedList {
         ret[0] = x;
         ret[1] = y;
         ret[2] = max;
+        try {
+            String match = "match.txt";
+            BufferedWriter out = new BufferedWriter(new FileWriter(match));
+            for (int i = 0; i < size; i++) {
+                for (int j = 0; j < pattern.size; j++) {
+                    out.write(record[i][j] + " ");
+                }
+                out.write("\n");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return ret;
     }
 
+    public int[][] LCSS(DoubleLinkedList pattern) {
+        int x = -1;
+        int y = -1;
+        int max = 0;
+        int gap = 5;
+        Line[][] record = new Line[size][pattern.size()];
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < pattern.size(); j++) {
+                record[i][j] = new Line(0, 0);
+            }
+        }
+        DoubleLinkedNode node1 = head;
+        for (int i = 0; i < size; i++) {
+            node1 = node1.getNext();
+            Dot dot1 = node1.getDot();
+            Dot dot1left = node1.getPrev().getDot();
+            Dot dot1right = node1.getNext().getDot();
+            NVector left1 = new NVector(dot1left.getX()-dot1.getX(), dot1left.getY()-dot1.getY(), dot1left.getZ()-dot1.getZ());
+            NVector right1 = new NVector(dot1right.getX()-dot1.getX(), dot1right.getY()-dot1.getY(), dot1right.getZ()-dot1.getZ());
+            double leftLength1 = left1.getRank();
+            double rightLength1 = right1.getRank();
+            double angle1 = left1.DotProduct(right1) / leftLength1 / rightLength1;
+            angle1 = Math.acos(angle1);
+            DoubleLinkedNode node2 = pattern.getHead();
+            for (int j = 0; j < pattern.size(); j++) {
+                node2 = node2.getNext();
+                Dot dot2 = node2.getDot();
+                Dot dot2left = node2.getPrev().getDot();
+                Dot dot2right = node2.getNext().getDot();
+                NVector left2 = new NVector(dot2left.getX()-dot2.getX(), dot2left.getY()-dot2.getY(), dot2left.getZ()-dot2.getZ());
+                NVector right2 = new NVector(dot2right.getX()-dot2.getX(), dot1right.getY()-dot2.getY(), dot2right.getZ()-dot2.getZ());
+                double leftLength2 = left2.getRank();
+                double rightLength2 = right2.getRank();
+                double angle2 = left2.DotProduct(right2) / leftLength2 / rightLength2;
+                angle2 = Math.acos(angle2);
+                double k21 = node1.getDot().getK();
+                double k22 = node2.getDot().getK();
+                double min = (Math.abs(k21) < Math.abs(k22)) ? Math.abs(k22) : Math.abs(k21);
+                double res = k21 + k22;
+                if (Math.abs(res) < 0.1 * min) {
+                    if (i == 0 || j == 0) {
+                        record[i][j].setStart(1);
+                    }else {
+                        record[i][j].setStart(record[i-1][j-1].getStart()+1);
+                        record[i][j].setEnd(0);
+                    }
+                    if (record[i][j].getStart() > max) {
+                        max = record[i][j].getStart();
+                        x = i;
+                        y = j;
+                    }
+                }else {
+                    if (i == 0 || j == 0) {
+                        record[i][j].setStart(0);
+                    }else {
+                        int start1 = record[i-1][j].getStart();
+                        int start2 = record[i][j-1].getStart();
+                        int start3 = record[i-1][j-1].getStart();
+                        int end1 = record[i-1][j].getEnd();
+                        int end2 = record[i][j-1].getEnd();
+                        int end3 = record[i-1][j-1].getEnd();
+                        if (start3 >= start1 && start3 >= start2) {
+                            if (end3 < gap) {
+                                record[i][j].setStart(start3);
+                                record[i][j].setEnd(end3+1);
+                            }else {
+                                if (start1 > start2) {
+                                    if (end1 < gap) {
+                                        record[i][j].setStart(start1);
+                                        record[i][j].setEnd(end1+1);
+                                    }else if (end2 < gap) {
+                                        record[i][j].setStart(start2);
+                                        record[i][j].setEnd(end2+1);
+                                    }else {
+                                        record[i][j].setStart(0);
+                                        record[i][j].setEnd(0);
+                                    }
+                                }else {
+                                    if (end2 < gap) {
+                                        record[i][j].setStart(start2);
+                                        record[i][j].setEnd(end2+1);
+                                    }else if (end1 < gap) {
+                                        record[i][j].setStart(start1);
+                                        record[i][j].setEnd(end1+1);
+                                    }else {
+                                        record[i][j].setStart(0);
+                                        record[i][j].setEnd(0);
+                                    }
+                                }
+                            }
+                        }else {
+                            if (start1 > start2) {
+                                if (end1 < gap) {
+                                    record[i][j].setStart(start1);
+                                    record[i][j].setEnd(end1+1);
+                                }else if (end2 < gap) {
+                                    record[i][j].setStart(start2);
+                                    record[i][j].setEnd(end2+1);
+                                }else {
+                                    record[i][j].setStart(0);
+                                    record[i][j].setEnd(0);
+                                }
+                            }else {
+                                if (end2 < gap) {
+                                    record[i][j].setStart(start2);
+                                    record[i][j].setEnd(end2+1);
+                                }else if (end1 < gap) {
+                                    record[i][j].setStart(start1);
+                                    record[i][j].setEnd(end1+1);
+                                }else {
+                                    record[i][j].setStart(0);
+                                    record[i][j].setEnd(0);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        int[][] result = new int[2][max];
+        result[0][max-1] = x;
+        result[1][max-1] = y;
+        while (max > 1) {
+            int left = record[x-1][y].getStart();
+            int above = record[x][y-1].getStart();
+            int top_left = record[x-1][y-1].getStart();
+            if (top_left == max) {
+                x--;
+                y--;
+            }else {
+                if (above == max) {
+                    y--;
+                }else if (left == max) {
+                    x--;
+                }else {
+                    x--;
+                    y--;
+                    max--;
+                    result[0][max-1] = x;
+                    result[1][max-1] = y;
+                }
+            }
+        }
+        return result;
+    }
 }

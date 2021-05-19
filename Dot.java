@@ -72,6 +72,10 @@ public class Dot {
         this.color = color;
     }
 
+    public double getDistance(Dot dot) {
+        return Math.sqrt(Math.pow(x - dot.getX(), 2) + Math.pow(y - dot.getY(), 2) + Math.pow(z - dot.getZ(), 2));
+    }
+
     public Dot(float x, float y, float z) {
         this.x = x;
         this.y = y;

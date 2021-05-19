@@ -316,62 +316,74 @@ public class PLYModel {
                 NVector ret = new NVector(0, 0, 0);
                 if (!hashSet.contains(dotB_index)) {
                     NVector vectorBA = new NVector(dotA.getX()-dotB.getX(), dotA.getY()- dotB.getY(), dotA.getZ()-dotB.getZ());
+                    Face neighbor = new Face();
                     for (int j = 0; j < face_graph[f].length; j++) {
                         if (face_graph[f][j] == -1) {
                             continue;
-                        }
-                        Face neighbor = faceList.get(face_graph[f][j]);
-                        List<Integer> neighbor_dot_indices = neighbor.getDot_indices();
-                        int cnt = 0;
-                        int indexD = 0;
-                        int[] arr = new int[3];
-                        for (int k = 0; k < 3; k++) {
-                            int index = neighbor_dot_indices.get(k);
-                            if (dotA_index == index | dotB_index == index | dotC_index == index) {
-                                arr[k] += 1;
-                                cnt++;
-                            }else {
-                                indexD = k;
+                        } else {
+                            Face temp = faceList.get(face_graph[f][j]);
+                            if (temp.getDot_indices().contains(dotA_index) && temp.getDot_indices().contains(dotB_index)) {
+                                neighbor = temp;
                             }
                         }
-                        if (cnt == 2) {
-                            double angleC = face.getAngles().get(indexC);
-                            double angleD = neighbor.getAngles().get(indexD);
-                            double temp = (1 / Math.tan(angleC) + 1 / Math.tan(angleD));
-                            ret = new NVector(temp*vectorBA.getX(), temp*vectorBA.getY(), temp*vectorBA.getZ());
+                    }
+                    List<Integer> neighbor_dot_indices = neighbor.getDot_indices();
+                    int cnt = 0;
+                    int indexD = 0;
+                    int[] arr = new int[3];
+                    for (int k = 0; k < 3; k++) {
+                        int index = neighbor_dot_indices.get(k);
+                        if (dotA_index == index | dotB_index == index | dotC_index == index) {
+                            arr[k] += 1;
+                            cnt++;
+                        }else {
+                            indexD = k;
                         }
                     }
+                    if (cnt == 2) {
+                        double angleC = face.getAngles().get(indexC);
+                        double angleD = neighbor.getAngles().get(indexD);
+                        double temp = (1 / Math.tan(angleC) + 1 / Math.tan(angleD));
+                        ret = new NVector(temp*vectorBA.getX(), temp*vectorBA.getY(), temp*vectorBA.getZ());
+                    }
+                    ans.add(ret);
                     hashSet.add(dotB_index);
-                }else if (!hashSet.contains(dotC_index)) {
+                }
+                if (!hashSet.contains(dotC_index)) {
                     NVector vectorCA = new NVector(dotA.getX()-dotC.getX(), dotA.getY()- dotC.getY(), dotA.getZ()-dotC.getZ());
+                    Face neighbor = new Face();
                     for (int j = 0; j < face_graph[f].length; j++) {
                         if (face_graph[f][j] == -1) {
                             continue;
-                        }
-                        Face neighbor = faceList.get(face_graph[f][j]);
-                        List<Integer> neighbor_dot_indices = neighbor.getDot_indices();
-                        int cnt = 0;
-                        int indexD = 0;
-                        int[] arr = new int[3];
-                        for (int k = 0; k < 3; k++) {
-                            int index = neighbor_dot_indices.get(k);
-                            if (dotA_index == index | dotB_index == index | dotC_index == index) {
-                                arr[k] += 1;
-                                cnt++;
-                            }else {
-                                indexD = k;
+                        } else {
+                            Face temp = faceList.get(face_graph[f][j]);
+                            if (temp.getDot_indices().contains(dotA_index) && temp.getDot_indices().contains(dotC_index)) {
+                                neighbor = temp;
                             }
                         }
-                        if (cnt == 2) {
-                            double angleB = face.getAngles().get(indexB);
-                            double angleD = neighbor.getAngles().get(indexD);
-                            double temp = (1 / Math.tan(angleB) + 1 / Math.tan(angleD));
-                            ret = new NVector(temp*vectorCA.getX(), temp*vectorCA.getY(), temp*vectorCA.getZ());
+                    }
+                    List<Integer> neighbor_dot_indices = neighbor.getDot_indices();
+                    int cnt = 0;
+                    int indexD = 0;
+                    int[] arr = new int[3];
+                    for (int k = 0; k < 3; k++) {
+                        int index = neighbor_dot_indices.get(k);
+                        if (dotA_index == index | dotB_index == index | dotC_index == index) {
+                            arr[k] += 1;
+                            cnt++;
+                        }else {
+                            indexD = k;
                         }
                     }
+                    if (cnt == 2) {
+                        double angleB = face.getAngles().get(indexB);
+                        double angleD = neighbor.getAngles().get(indexD);
+                        double temp = (1 / Math.tan(angleB) + 1 / Math.tan(angleD));
+                        ret = new NVector(temp*vectorCA.getX(), temp*vectorCA.getY(), temp*vectorCA.getZ());
+                    }
+                    ans.add(ret);
                     hashSet.add(dotC_index);
                 }
-                ans.add(ret);
             }
             double H = ans.getRank() / 4 / area;
             dot.setH(H);
@@ -1162,7 +1174,7 @@ public class PLYModel {
         return ret.subList(0,2);
     }
 
-    public int[][] match(PLYModel plyModel2) throws Exception {
+    public int[][] LCSMatch(PLYModel plyModel2) throws Exception {
         List<DoubleLinkedList> list1 = this.getSectionBorderLine();
         List<DoubleLinkedList> list2 = plyModel2.getSectionBorderLine();
         DoubleLinkedList doubleLinkedList1 = list1.get(0);
