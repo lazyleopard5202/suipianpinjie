@@ -5,10 +5,12 @@ import org.apache.tomcat.jni.Proc;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 
-public class DoubleLinkedList {
+public class DoubleLinkedList<T> {
 
-    private DoubleLinkedNode head;
+    private DoubleLinkedNode<T> head;
     private int size;
 
     public DoubleLinkedNode getHead() {
@@ -39,12 +41,12 @@ public class DoubleLinkedList {
         return temp;
     }
 
-    public int getIndex(Dot dot) throws Exception {
+    public int getIndex(T value) throws Exception {
         DoubleLinkedNode temp = head;
         int index = 0;
         for (int i = 0; i < size; i++) {
             temp = temp.getNext();
-            if (temp.getDot() == dot) {
+            if (temp.getVal() == value) {
                 return index;
             }
             index++;
@@ -52,8 +54,8 @@ public class DoubleLinkedList {
         return -1;
     }
 
-    public void push_front(Dot dot) throws Exception {
-        DoubleLinkedNode temp = new DoubleLinkedNode(dot);
+    public void push_front(T val) throws Exception {
+        DoubleLinkedNode temp = new DoubleLinkedNode(val);
         if (size == 0) {
             temp.setPrev(temp);
             temp.setNext(temp);
@@ -69,8 +71,8 @@ public class DoubleLinkedList {
         size++;
     }
 
-    public void push_back(Dot dot) throws Exception {
-        DoubleLinkedNode temp = new DoubleLinkedNode(dot);
+    public void push_back(T val) throws Exception {
+        DoubleLinkedNode temp = new DoubleLinkedNode(val);
         if (size == 0) {
             temp.setPrev(temp);
             temp.setNext(temp);
@@ -85,9 +87,9 @@ public class DoubleLinkedList {
         size++;
     }
 
-    public void add(Dot dot, int index) throws Exception {
+    public void add(T val, int index) throws Exception {
         DoubleLinkedNode node = getNode(index);
-        DoubleLinkedNode temp = new DoubleLinkedNode(dot, node.getPrev(), node);
+        DoubleLinkedNode temp = new DoubleLinkedNode(val, node.getPrev(), node);
         node.getPrev().setNext(temp);
         node.setPrev(temp);
         size++;
@@ -98,6 +100,22 @@ public class DoubleLinkedList {
         node.getPrev().setNext(node.getNext());
         node.getNext().setPrev(node.getPrev());
         size--;
+    }
+
+    public void remove(DoubleLinkedNode node) throws Exception {
+        DoubleLinkedNode temp = head;
+        for (int i = 0; i < size; i++) {
+            temp = temp.getNext();
+            if (temp == node) {
+                DoubleLinkedNode prev = temp.getPrev();
+                DoubleLinkedNode next = temp.getNext();
+                prev.setNext(next);
+                next.setPrev(prev);
+                size--;
+                return;
+            }
+        }
+        return;
     }
 
     public DoubleLinkedNode get(int index) throws Exception {
@@ -113,25 +131,47 @@ public class DoubleLinkedList {
         DoubleLinkedList doubleLinkedList = new DoubleLinkedList();
         DoubleLinkedNode temp = head.getNext();
         do {
-            doubleLinkedList.push_front(temp.getDot());
+            doubleLinkedList.push_front(temp.getVal());
             temp = temp.getNext();
-        }while (temp.getDot() != head.getNext().getDot());
+        }while (temp.getVal() != head.getNext().getVal());
         return doubleLinkedList;
     }
 
-    public int[] LCS(DoubleLinkedList pattern) {
+    public <Dot extends com.kaogu.Algorithm.Dot> DoubleLinkedList<Pair> group(DoubleLinkedList<Dot> mate) throws Exception {
+        DoubleLinkedList<Pair> result = new DoubleLinkedList<>();
+        Comparator<Dij> comparator = new Comparator<Dij>() {
+            @Override
+            public int compare(Dij o1, Dij o2) {
+                return (o1.distance < o2.distance) ? -1 : 1;
+            }
+        };
+        PriorityQueue<Dij> priorityQueue = new PriorityQueue<>(comparator);
+        for (int i = 0; i < size; i++) {
+            Dot dotA = (Dot) getNode(i).getVal();
+            for (int j = 0; j < mate.size; j++) {
+                Dot dotB = (Dot) mate.getNode(j).getVal();
+                priorityQueue.add(new Dij(j, dotA.getDistance(dotB)));
+            }
+            Dij dij = priorityQueue.peek();
+            result.push_back(new Pair((Dot)getNode(i).getVal(), (Dot)mate.getNode(dij.getIndex()).getVal()));
+            priorityQueue.clear();
+        }
+        return result;
+    }
+
+    public<Dot extends com.kaogu.Algorithm.Dot> int[] LCS(DoubleLinkedList pattern) {
         int x = -1;
         int y = -1;
         int max = 0;
         int[] ret = new int[3];
         double standard = Math.pow(10, -1);
-        int[][] record = new int[size][pattern.size()];
+        int[][] record = new int[this.size()][pattern.size()];
         DoubleLinkedNode node1 = head;
         for (int i = 0; i < size; i++) {
             node1 = node1.getNext();
-            Dot dot1 = node1.getDot();
-            Dot dot1left = node1.getPrev().getDot();
-            Dot dot1right = node1.getNext().getDot();
+            Dot dot1 = (Dot)node1.getVal();
+            Dot dot1left = (Dot)node1.getPrev().getVal();
+            Dot dot1right = (Dot)node1.getNext().getVal();
             NVector left1 = new NVector(dot1left.getX()-dot1.getX(), dot1left.getY()-dot1.getY(), dot1left.getZ()-dot1.getZ());
             NVector right1 = new NVector(dot1right.getX()-dot1.getX(), dot1right.getY()-dot1.getY(), dot1right.getZ()-dot1.getZ());
             double leftLength1 = left1.getRank();
@@ -141,17 +181,17 @@ public class DoubleLinkedList {
             DoubleLinkedNode node2 = pattern.getHead();
             for (int j = 0; j < pattern.size(); j++) {
                 node2 = node2.getNext();
-                Dot dot2 = node2.getDot();
-                Dot dot2left = node2.getPrev().getDot();
-                Dot dot2right = node2.getNext().getDot();
+                Dot dot2 = (Dot)node2.getVal();
+                Dot dot2left = (Dot)node2.getPrev().getVal();
+                Dot dot2right = (Dot)node2.getNext().getVal();
                 NVector left2 = new NVector(dot2left.getX()-dot2.getX(), dot2left.getY()-dot2.getY(), dot2left.getZ()-dot2.getZ());
                 NVector right2 = new NVector(dot2right.getX()-dot2.getX(), dot1right.getY()-dot2.getY(), dot2right.getZ()-dot2.getZ());
                 double leftLength2 = left2.getRank();
                 double rightLength2 = right2.getRank();
                 double angle2 = left2.DotProduct(right2) / leftLength2 / rightLength2;
                 angle2 = Math.acos(angle2);
-                double k21 = node1.getDot().getK2();
-                double k22 = node2.getDot().getK2();
+                double k21 = dot1.getK2();
+                double k22 = dot2.getK2();
                 double min = (Math.abs(k21) < Math.abs(k22)) ? Math.abs(k22) : Math.abs(k21);
                 double res = k21 + k22;
                 if (Math.abs(res) < 0.05 * min) {
@@ -190,7 +230,7 @@ public class DoubleLinkedList {
         return ret;
     }
 
-    public int[][] LCSS(DoubleLinkedList pattern) {
+    public<Pair extends com.kaogu.Algorithm.Pair> int[][] LCSS(DoubleLinkedList<Pair> pattern) {
         int x = -1;
         int y = -1;
         int max = 0;
@@ -204,32 +244,36 @@ public class DoubleLinkedList {
         DoubleLinkedNode node1 = head;
         for (int i = 0; i < size; i++) {
             node1 = node1.getNext();
-            Dot dot1 = node1.getDot();
-            Dot dot1left = node1.getPrev().getDot();
-            Dot dot1right = node1.getNext().getDot();
-            NVector left1 = new NVector(dot1left.getX()-dot1.getX(), dot1left.getY()-dot1.getY(), dot1left.getZ()-dot1.getZ());
-            NVector right1 = new NVector(dot1right.getX()-dot1.getX(), dot1right.getY()-dot1.getY(), dot1right.getZ()-dot1.getZ());
-            double leftLength1 = left1.getRank();
-            double rightLength1 = right1.getRank();
-            double angle1 = left1.DotProduct(right1) / leftLength1 / rightLength1;
-            angle1 = Math.acos(angle1);
+            Pair pair1 = (Pair)node1.getVal();
+            Dot dot11 = pair1.getDot1();
+            Dot dot12 = pair1.getDot2();
+//            NVector left1 = new NVector(dot1left.getX()-dot1.getX(), dot1left.getY()-dot1.getY(), dot1left.getZ()-dot1.getZ());
+//            NVector right1 = new NVector(dot1right.getX()-dot1.getX(), dot1right.getY()-dot1.getY(), dot1right.getZ()-dot1.getZ());
+//            double leftLength1 = left1.getRank();
+//            double rightLength1 = right1.getRank();
+//            double angle1 = left1.DotProduct(right1) / leftLength1 / rightLength1;
+//            angle1 = Math.acos(angle1);
             DoubleLinkedNode node2 = pattern.getHead();
             for (int j = 0; j < pattern.size(); j++) {
                 node2 = node2.getNext();
-                Dot dot2 = node2.getDot();
-                Dot dot2left = node2.getPrev().getDot();
-                Dot dot2right = node2.getNext().getDot();
-                NVector left2 = new NVector(dot2left.getX()-dot2.getX(), dot2left.getY()-dot2.getY(), dot2left.getZ()-dot2.getZ());
-                NVector right2 = new NVector(dot2right.getX()-dot2.getX(), dot1right.getY()-dot2.getY(), dot2right.getZ()-dot2.getZ());
-                double leftLength2 = left2.getRank();
-                double rightLength2 = right2.getRank();
-                double angle2 = left2.DotProduct(right2) / leftLength2 / rightLength2;
-                angle2 = Math.acos(angle2);
-                double k21 = node1.getDot().getK();
-                double k22 = node2.getDot().getK();
-                double min = (Math.abs(k21) < Math.abs(k22)) ? Math.abs(k22) : Math.abs(k21);
-                double res = k21 + k22;
-                if (Math.abs(res) < 0.1 * min) {
+                Pair pair2 = (Pair) node2.getVal();
+                Dot dot21 = pair2.getDot1();
+                Dot dot22 = pair2.getDot2();
+//                NVector left2 = new NVector(dot2left.getX()-dot2.getX(), dot2left.getY()-dot2.getY(), dot2left.getZ()-dot2.getZ());
+//                NVector right2 = new NVector(dot2right.getX()-dot2.getX(), dot1right.getY()-dot2.getY(), dot2right.getZ()-dot2.getZ());
+//                double leftLength2 = left2.getRank();
+//                double rightLength2 = right2.getRank();
+//                double angle2 = left2.DotProduct(right2) / leftLength2 / rightLength2;
+//                angle2 = Math.acos(angle2);
+                double k11 = dot11.getK();
+                double k12 = dot12.getK();
+                double k21 = dot21.getK();
+                double k22 = dot22.getK();
+                double min1 = (Math.abs(k11) < Math.abs(k21)) ? Math.abs(k21) : Math.abs(k11);
+                double min2 = (Math.abs(k12) < Math.abs(k22)) ? Math.abs(k22) : Math.abs(k12);
+                double res1 = k11 + k21;
+                double res2 = k12 + k22;
+                if (Math.abs(res1) < 0.1 * min1 && Math.abs(res2) < 0.1 * min2) {
                     if (i == 0 || j == 0) {
                         record[i][j].setStart(1);
                     }else {

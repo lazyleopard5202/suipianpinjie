@@ -1,17 +1,17 @@
 package com.kaogu.Algorithm;
 
-public class DoubleLinkedNode {
+public class DoubleLinkedNode<T> {
 
-    private Dot dot;
+    private T val;
     private DoubleLinkedNode prev;
     private DoubleLinkedNode next;
 
-    public Dot getDot() {
-        return dot;
+    public T getVal() {
+        return val;
     }
 
-    public void setDot(Dot dot) {
-        this.dot = dot;
+    public void setVal(T val) {
+        this.val = val;
     }
 
     public DoubleLinkedNode getPrev() {
@@ -34,12 +34,12 @@ public class DoubleLinkedNode {
 
     }
 
-    public DoubleLinkedNode(Dot dot) {
-        this.dot = dot;
+    public DoubleLinkedNode(T val) {
+        this.val = val;
     }
 
-    public DoubleLinkedNode(Dot dot, DoubleLinkedNode prev, DoubleLinkedNode next) {
-        this.dot = dot;
+    public DoubleLinkedNode(T val, DoubleLinkedNode prev, DoubleLinkedNode next) {
+        this.val = val;
         this.prev = prev;
         this.next = next;
     }

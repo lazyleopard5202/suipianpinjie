@@ -1152,25 +1152,6 @@ public class PLYModel {
                 return o2.size() - o1.size();
             }
         });
-        for (int i = 0; i < ret.size(); i++) {
-            DoubleLinkedList doubleLinkedList = ret.get(i);
-            DoubleLinkedNode temp = doubleLinkedList.getHead();
-            do {
-                temp = temp.getNext();
-            }while (Math.abs(temp.getDot().getK()) < 0.01);
-            DoubleLinkedNode start = temp;
-            doubleLinkedList.getHead().setNext(start);
-            temp = temp.getNext();
-            while (temp.getDot() != start.getDot()) {
-                if (Math.abs(temp.getDot().getK()) < 0.01) {
-                    temp.getNext().setPrev(temp.getPrev());
-                    temp.getPrev().setNext(temp.getNext());
-                    doubleLinkedList.setSize(doubleLinkedList.size()-1);
-                }
-                temp = temp.getNext();
-            }
-            System.out.println(doubleLinkedList.size());
-        }
         return ret.subList(0,2);
     }
 
