@@ -159,19 +159,19 @@ public class DoubleLinkedList<T> {
         return result;
     }
 
-    public<Dot extends com.kaogu.Algorithm.Dot> int[] LCS(DoubleLinkedList pattern) {
+    public<Dot extends com.kaogu.Algorithm.Dot> int[] LCS(DoubleLinkedList<Dot> pattern) {
         int x = -1;
         int y = -1;
         int max = 0;
         int[] ret = new int[3];
         double standard = Math.pow(10, -1);
-        int[][] record = new int[this.size()][pattern.size()];
+        int[][] record = new int[size][pattern.size()];
         DoubleLinkedNode node1 = head;
         for (int i = 0; i < size; i++) {
             node1 = node1.getNext();
-            Dot dot1 = (Dot)node1.getVal();
-            Dot dot1left = (Dot)node1.getPrev().getVal();
-            Dot dot1right = (Dot)node1.getNext().getVal();
+            Dot dot1 = (Dot) node1.getVal();
+            Dot dot1left = (Dot) node1.getPrev().getVal();
+            Dot dot1right = (Dot) node1.getNext().getVal();
             NVector left1 = new NVector(dot1left.getX()-dot1.getX(), dot1left.getY()-dot1.getY(), dot1left.getZ()-dot1.getZ());
             NVector right1 = new NVector(dot1right.getX()-dot1.getX(), dot1right.getY()-dot1.getY(), dot1right.getZ()-dot1.getZ());
             double leftLength1 = left1.getRank();
@@ -181,9 +181,9 @@ public class DoubleLinkedList<T> {
             DoubleLinkedNode node2 = pattern.getHead();
             for (int j = 0; j < pattern.size(); j++) {
                 node2 = node2.getNext();
-                Dot dot2 = (Dot)node2.getVal();
-                Dot dot2left = (Dot)node2.getPrev().getVal();
-                Dot dot2right = (Dot)node2.getNext().getVal();
+                Dot dot2 = (Dot) node2.getVal();
+                Dot dot2left = (Dot) node2.getPrev().getVal();
+                Dot dot2right = (Dot) node2.getNext().getVal();
                 NVector left2 = new NVector(dot2left.getX()-dot2.getX(), dot2left.getY()-dot2.getY(), dot2left.getZ()-dot2.getZ());
                 NVector right2 = new NVector(dot2right.getX()-dot2.getX(), dot1right.getY()-dot2.getY(), dot2right.getZ()-dot2.getZ());
                 double leftLength2 = left2.getRank();
@@ -230,7 +230,7 @@ public class DoubleLinkedList<T> {
         return ret;
     }
 
-    public<Pair extends com.kaogu.Algorithm.Pair> int[][] LCSS(DoubleLinkedList<Pair> pattern) {
+    public<Pair extends com.kaogu.Algorithm.Pair> int[][] PairLCSS(DoubleLinkedList<Pair> pattern) {
         int x = -1;
         int y = -1;
         int max = 0;
@@ -354,6 +354,159 @@ public class DoubleLinkedList<T> {
             }
         }
         int[][] result = new int[2][max];
+        result[0][max-1] = x;
+        result[1][max-1] = y;
+        while (max > 1) {
+            int left = record[x-1][y].getStart();
+            int above = record[x][y-1].getStart();
+            int top_left = record[x-1][y-1].getStart();
+            if (top_left == max) {
+                x--;
+                y--;
+            }else {
+                if (above == max) {
+                    y--;
+                }else if (left == max) {
+                    x--;
+                }else {
+                    x--;
+                    y--;
+                    max--;
+                    result[0][max-1] = x;
+                    result[1][max-1] = y;
+                }
+            }
+        }
+        return result;
+    }
+
+    public<Dot extends com.kaogu.Algorithm.Dot> int[][] LCSS(DoubleLinkedList<Dot> pattern) {
+        int x = -1;
+        int y = -1;
+        int max = 0;
+        int gap = 5;
+        Line[][] record = new Line[size][pattern.size()];
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < pattern.size(); j++) {
+                record[i][j] = new Line(0, 0);
+            }
+        }
+        DoubleLinkedNode node1 = head;
+        for (int i = 0; i < size; i++) {
+            node1 = node1.getNext();
+            Dot dot1 = (Dot) node1.getVal();
+            Dot dot1left = (Dot) node1.getPrev().getVal();
+            Dot dot1right = (Dot) node1.getNext().getVal();
+            NVector left1 = new NVector(dot1left.getX()-dot1.getX(), dot1left.getY()-dot1.getY(), dot1left.getZ()-dot1.getZ());
+            NVector right1 = new NVector(dot1right.getX()-dot1.getX(), dot1right.getY()-dot1.getY(), dot1right.getZ()-dot1.getZ());
+            double leftLength1 = left1.getRank();
+            double rightLength1 = right1.getRank();
+            double angle1 = left1.DotProduct(right1) / leftLength1 / rightLength1;
+            angle1 = Math.acos(angle1);
+            DoubleLinkedNode node2 = pattern.getHead();
+            for (int j = 0; j < pattern.size(); j++) {
+                node2 = node2.getNext();
+                Dot dot2 = (Dot) node2.getVal();
+                Dot dot2left = (Dot) node2.getPrev().getVal();
+                Dot dot2right = (Dot) node2.getNext().getVal();
+                NVector left2 = new NVector(dot2left.getX()-dot2.getX(), dot2left.getY()-dot2.getY(), dot2left.getZ()-dot2.getZ());
+                NVector right2 = new NVector(dot2right.getX()-dot2.getX(), dot1right.getY()-dot2.getY(), dot2right.getZ()-dot2.getZ());
+                double leftLength2 = left2.getRank();
+                double rightLength2 = right2.getRank();
+                double angle2 = left2.DotProduct(right2) / leftLength2 / rightLength2;
+                angle2 = Math.acos(angle2);
+                double K1 = dot1.getK();
+                double K2 = dot2.getK();
+                double H1 = dot1.getH();
+                double H2 = dot2.getH();
+                double maxK = Math.max(Math.abs(K1), Math.abs(K2));
+                double maxH = Math.max(Math.abs(H1), Math.abs(H2));
+                double resK = K1 - K2;
+                double resH = H1 + H2;
+                if (Math.abs(resK) < 0.1 * maxK && Math.abs(resH) < 0.1 * maxH) {
+                    if (i == 0 || j == 0) {
+                        record[i][j].setStart(1);
+                    }else {
+                        record[i][j].setStart(record[i-1][j-1].getStart()+1);
+                        record[i][j].setEnd(0);
+                    }
+                    if (record[i][j].getStart() > max) {
+                        max = record[i][j].getStart();
+                        x = i;
+                        y = j;
+                    }
+                }else {
+                    if (i == 0 || j == 0) {
+                        record[i][j].setStart(0);
+                    }else {
+                        int start1 = record[i-1][j].getStart();
+                        int start2 = record[i][j-1].getStart();
+                        int start3 = record[i-1][j-1].getStart();
+                        int end1 = record[i-1][j].getEnd();
+                        int end2 = record[i][j-1].getEnd();
+                        int end3 = record[i-1][j-1].getEnd();
+                        if (start3 >= start1 && start3 >= start2) {
+                            if (end3 < gap) {
+                                record[i][j].setStart(start3);
+                                record[i][j].setEnd(end3+1);
+                            }else {
+                                if (start1 > start2) {
+                                    if (end1 < gap) {
+                                        record[i][j].setStart(start1);
+                                        record[i][j].setEnd(end1+1);
+                                    }else if (end2 < gap) {
+                                        record[i][j].setStart(start2);
+                                        record[i][j].setEnd(end2+1);
+                                    }else {
+                                        record[i][j].setStart(0);
+                                        record[i][j].setEnd(0);
+                                    }
+                                }else {
+                                    if (end2 < gap) {
+                                        record[i][j].setStart(start2);
+                                        record[i][j].setEnd(end2+1);
+                                    }else if (end1 < gap) {
+                                        record[i][j].setStart(start1);
+                                        record[i][j].setEnd(end1+1);
+                                    }else {
+                                        record[i][j].setStart(0);
+                                        record[i][j].setEnd(0);
+                                    }
+                                }
+                            }
+                        }else {
+                            if (start1 > start2) {
+                                if (end1 < gap) {
+                                    record[i][j].setStart(start1);
+                                    record[i][j].setEnd(end1+1);
+                                }else if (end2 < gap) {
+                                    record[i][j].setStart(start2);
+                                    record[i][j].setEnd(end2+1);
+                                }else {
+                                    record[i][j].setStart(0);
+                                    record[i][j].setEnd(0);
+                                }
+                            }else {
+                                if (end2 < gap) {
+                                    record[i][j].setStart(start2);
+                                    record[i][j].setEnd(end2+1);
+                                }else if (end1 < gap) {
+                                    record[i][j].setStart(start1);
+                                    record[i][j].setEnd(end1+1);
+                                }else {
+                                    record[i][j].setStart(0);
+                                    record[i][j].setEnd(0);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        int[][] result = new int[2][max];
+        if (max == 0) {
+            return result;
+        }
         result[0][max-1] = x;
         result[1][max-1] = y;
         while (max > 1) {

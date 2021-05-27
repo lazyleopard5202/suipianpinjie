@@ -900,9 +900,164 @@ public class PLYIO {
         plyModel2.removeNoise();
         List<DoubleLinkedList> list1 = plyModel1.getSectionBorderLine();
         List<DoubleLinkedList> list2 = plyModel2.getSectionBorderLine();
+        DoubleLinkedList doubleLinkedList1 = list1.get(0);
+        DoubleLinkedList doubleLinkedList2 = list1.get(1);
+        DoubleLinkedList doubleLinkedList3 = doubleLinkedList1.reverse();
+        DoubleLinkedList doubleLinkedList4 = doubleLinkedList2.reverse();
+        DoubleLinkedList doubleLinkedList5 = list2.get(0);
+        DoubleLinkedList doubleLinkedList6 = list2.get(1);
+        DoubleLinkedList doubleLinkedList7 = doubleLinkedList5.reverse();
+        DoubleLinkedList doubleLinkedList8 = doubleLinkedList6.reverse();
+        int[][][] ret = new int[16][][];
+        ret[0] = doubleLinkedList1.LCSS(doubleLinkedList5);
+        ret[1] = doubleLinkedList2.LCSS(doubleLinkedList6);
+        ret[2] = doubleLinkedList1.LCSS(doubleLinkedList6);
+        ret[3] = doubleLinkedList2.LCSS(doubleLinkedList5);
+        ret[4] = doubleLinkedList1.LCSS(doubleLinkedList7);
+        ret[5] = doubleLinkedList2.LCSS(doubleLinkedList8);
+        ret[6] = doubleLinkedList1.LCSS(doubleLinkedList8);
+        ret[7] = doubleLinkedList2.LCSS(doubleLinkedList7);
+        ret[8] = doubleLinkedList3.LCSS(doubleLinkedList5);
+        ret[9] = doubleLinkedList4.LCSS(doubleLinkedList6);
+        ret[10] = doubleLinkedList3.LCSS(doubleLinkedList6);
+        ret[11] = doubleLinkedList4.LCSS(doubleLinkedList5);
+        ret[12] = doubleLinkedList3.LCSS(doubleLinkedList7);
+        ret[13] = doubleLinkedList4.LCSS(doubleLinkedList8);
+        ret[14] = doubleLinkedList3.LCSS(doubleLinkedList8);
+        ret[15] = doubleLinkedList4.LCSS(doubleLinkedList7);
+        for (int i = 0; i < 8; i++) {
+            String target_path1 = ply_path1.substring(0, ply_path1.length()-4) + "_match" + i + ".ply";
+            String target_path2 = ply_path2.substring(0, ply_path2.length()-4) + "_match" + i + ".ply";
+            Color[][] colors = new Color[2][];
+            colors[0] = new Color[ret[2*i][0].length];
+            colors[1] = new Color[ret[2*i+1][0].length];
+            for (int j = 0; j < colors[0].length; j++) {
+                colors[0][j] = new Color((int)(255*Math.random()), (int)(255*Math.random()), (int)(255*Math.random()));
+            }
+            for (int j = 0; j < colors[1].length; j++) {
+                colors[1][j] = new Color((int)(255*Math.random()), (int)(255*Math.random()), (int)(255*Math.random()));
+            }
+            DoubleLinkedList[] linkedLists = new DoubleLinkedList[2];
+            int[][][] match = new int[2][][];
+            match[0] = ret[2*i];
+            match[1] = ret[2*i+1];
+            if (i < 4) {
+                linkedLists[0] = doubleLinkedList1;
+                linkedLists[1] = doubleLinkedList2;
+            }else {
+                linkedLists[0] = doubleLinkedList3;
+                linkedLists[1] = doubleLinkedList4;
+            }
+            writeLCSSMatchPLY(target_path1, plyModel1, linkedLists, match, colors, true);
+            if (i % 4 == 0) {
+                linkedLists[0] = doubleLinkedList5;
+                linkedLists[1] = doubleLinkedList6;
+            }else if (i % 4 == 1) {
+                linkedLists[0] = doubleLinkedList6;
+                linkedLists[1] = doubleLinkedList5;
+            }else if (i % 4 == 2) {
+                linkedLists[0] = doubleLinkedList7;
+                linkedLists[1] = doubleLinkedList8;
+            }else {
+                linkedLists[0] = doubleLinkedList8;
+                linkedLists[1] = doubleLinkedList7;
+            }
+            writeLCSSMatchPLY(target_path2, plyModel2, linkedLists, match, colors, false);
+        }
+    }
+
+    public static void writeLCSSMatchPLY(String ply_path, PLYModel plyModel, DoubleLinkedList[] doubleLinkedLists, int[][][] match, Color[][] colors, Boolean first) throws Exception {
+        Color white = new Color(255, 255, 255);
+        DoubleLinkedList doubleLinkedList1 = doubleLinkedLists[0];
+        DoubleLinkedList doubleLinkedList2 = doubleLinkedLists[1];
+        List<Dot> dotList = plyModel.getDotList();
+        List<Face> faceList = plyModel.getFaceList();
+        HashMap<Dot, Integer> DotMap = plyModel.getDotMap();
+        HashSet<Dot> hashSet = new HashSet<>();
+        if (first) {
+            for (int i = 0; i < match[0][0].length; i++) {
+                hashSet.add((Dot) doubleLinkedList1.getNode(match[0][0][i]).getVal());
+            }
+            for (int i = 0; i < match[1][0].length; i++) {
+                hashSet.add((Dot) doubleLinkedList2.getNode(match[1][0][i]).getVal());
+            }
+        }else {
+            for (int i = 0; i < match[0][1].length; i++) {
+                hashSet.add((Dot) doubleLinkedList1.getNode(match[0][1][i]).getVal());
+            }
+            for (int i = 0; i < match[1][1].length; i++) {
+                hashSet.add((Dot) doubleLinkedList2.getNode(match[1][1][i]).getVal());
+            }
+        }
+        try {
+            BufferedWriter out = new BufferedWriter(new FileWriter(ply_path));
+            out.write("ply\n" +
+                    "format ascii 1.0\n" +
+                    "element vertex " + dotList.size() + "\n");
+            out.write("property float x\n" +
+                    "property float y\n" +
+                    "property float z\n");
+            out.write("property uchar red\n" +
+                    "property uchar green\n" +
+                    "property uchar blue\n");
+            out.write("element face " + faceList.size() + "\n");
+            out.write("property list uchar int vertex_indices\n");
+            out.write("end_header\n");
+            int cnt1 = 0;
+            int cnt2 = 0;
+            for (int i = 0; i < dotList.size(); i++) {
+                Dot dot = dotList.get(i);
+                if (hashSet.contains(dot)) {
+                    int index1 = doubleLinkedList1.getIndex(dot);
+                    int index2 = doubleLinkedList2.getIndex(dot);
+                    if (index1 != -1) {
+                        out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + colors[0][cnt1].toColor() + "\n");
+                        cnt1++;
+                    }else if (index2 != -1){
+                        out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + colors[1][cnt2].toColor() + "\n");
+                        cnt2++;
+                    }else {
+                        System.out.println("something wrong");
+                    }
+                }else {
+                    out.write(dot.getX() + " " + dot.getY() + " " + dot.getZ() + " " + white.toColor() + "\n");
+                }
+            }
+            for (Face face : faceList) {
+                List<Integer> dot_indices = face.getDot_indices();
+                out.write(dot_indices.size() + " ");
+                for (int i = 0; i < dot_indices.size(); i++) {
+                    out.write(dot_indices.get(i) + " ");
+                }
+                out.write("\n");
+            }
+            out.close();
+            System.out.println("MatchPLY写入成功");
+        }catch (IOException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void PairLCSSMatchPLY(String ply_path1, String ply_path2, double threshold1, int group_cnt1, double threshold2, int group_cnt2) throws Exception {
+        PLYModel plyModel1 = readPLY(ply_path1);
+        PLYModel plyModel2 = readPLY(ply_path2);
+        plyModel1.setThreshold(threshold1);
+        plyModel2.setThreshold(threshold2);
+        plyModel1.setGroup_cnt(group_cnt1);
+        plyModel2.setGroup_cnt(group_cnt2);
+        plyModel1.ClassifyFaceGroup();
+        plyModel2.ClassifyFaceGroup();
+        plyModel1.UnionSmallGroup4();
+        plyModel2.UnionSmallGroup4();
+        plyModel1.removeNoise();
+        plyModel2.removeNoise();
+        List<DoubleLinkedList> list1 = plyModel1.getSectionBorderLine();
+        List<DoubleLinkedList> list2 = plyModel2.getSectionBorderLine();
         DoubleLinkedList<Pair> pairDoubleLinkedList1 = list1.get(1).group(list1.get(0));
         DoubleLinkedList<Pair> pairDoubleLinkedList2 = list2.get(1).group(list2.get(0));
-        int[][] ret = pairDoubleLinkedList1.LCSS(pairDoubleLinkedList2);
+        int[][] ret = pairDoubleLinkedList1.PairLCSS(pairDoubleLinkedList2);
         String target_path1 = ply_path1.substring(0, ply_path1.length()-4) + "_match.ply";
         String target_path2 = ply_path2.substring(0, ply_path2.length()-4) + "_match.ply";
         Color[] colors = new Color[ret[0].length];
@@ -910,11 +1065,11 @@ public class PLYIO {
             colors[j] = new Color((int)(255*Math.random()), (int)(255*Math.random()), (int)(255*Math.random()));
         }
         DoubleLinkedList[] linkedLists = new DoubleLinkedList[2];
-        writeLCSSMatchPLY(target_path1, plyModel1, pairDoubleLinkedList1, ret, colors, true);
-        writeLCSSMatchPLY(target_path2, plyModel2, pairDoubleLinkedList2, ret, colors, false);
+        writePairLCSSMatchPLY(target_path1, plyModel1, pairDoubleLinkedList1, ret, colors, true);
+        writePairLCSSMatchPLY(target_path2, plyModel2, pairDoubleLinkedList2, ret, colors, false);
     }
 
-    public static void writeLCSSMatchPLY(String ply_path, PLYModel plyModel, DoubleLinkedList<Pair> doubleLinkedList, int[][] match, Color[] colors, Boolean first) throws Exception {
+    public static void writePairLCSSMatchPLY(String ply_path, PLYModel plyModel, DoubleLinkedList<Pair> doubleLinkedList, int[][] match, Color[] colors, Boolean first) throws Exception {
         Color white = new Color(255, 255, 255);
         List<Dot> dotList = plyModel.getDotList();
         List<Face> faceList = plyModel.getFaceList();
